@@ -1,6 +1,6 @@
 'use client'
 
-import Grafico from "@/components/ui/grafico";
+import Grafico from "@/components/ui/Grafico"
 import {
   KPICard,
   ClientRankItem,
@@ -10,7 +10,8 @@ import {
   ChartHeader,
   ClientsRankSection,
   RoutesSection,
-} from "@/components/ui/dashboard";
+} from "@/components/ui/Dashboard"
+
 import { ReactNode, useState } from "react";
 
 interface Route {
