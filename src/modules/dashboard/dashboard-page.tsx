@@ -1,16 +1,14 @@
 'use client'
 
-import Grafico from "@/components/ui/Grafico"
+import Grafico from "@/components/ui/grafico";
+
 import {
   KPICard,
-  ClientRankItem,
-  RouteCard,
-  AlertBanner,
   SectionHeader,
   ChartHeader,
   ClientsRankSection,
   RoutesSection,
-} from "@/components/ui/Dashboard"
+} from "@/components/ui/dashboard"
 
 import { ReactNode, useState } from "react";
 
@@ -114,16 +112,6 @@ export function DashboardPage(): ReactNode {
     setPeriodSelected(period);
     console.log(`Período alterado para: ${period}`);
     // Aqui você pode fazer fetch de novos dados baseado no período
-  };
-
-  const handleViewMapClick = () => {
-    console.log("Abrir mapa das rotas");
-    // Implementar lógica de navegação para mapa
-  };
-
-
-  const handleViewMoreClients = () => {
-
   };
 
   return (

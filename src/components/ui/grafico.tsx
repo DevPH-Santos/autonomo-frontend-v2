@@ -33,7 +33,13 @@ const Grafico: React.FC<GraficoProps> = ({
       className="relative rounded-xl bg-slate-50 p-5 pt-4 border-l-2 border-b-2 border-slate-300"
       style={{ height: `${height}px` }}
     >
-      <ResponsiveContainer width="100%" height="100%">
+      <ResponsiveContainer
+        width="100%"
+        height="100%"
+        minWidth={0}
+        minHeight={height}
+        initialDimension={{ width: 600, height }}
+      >
         <AreaChart
           data={data}
           margin={{ top: 10, right: 20, left: 10, bottom: 0 }}
@@ -60,7 +66,7 @@ const Grafico: React.FC<GraficoProps> = ({
               fill: "#94a3b8",
               fontSize: 10,
               fontWeight: 700,
-              letterSpacing: "-0.05em",
+              letterSpacing: 0,
             }}
             tickFormatter={(value) => value.toUpperCase()}
           />
