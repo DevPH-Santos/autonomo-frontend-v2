@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 
 const navigation = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -21,45 +21,69 @@ interface AppShellProps {
 
 export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
   const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [busca, setBusca] = useState('');
+  const [buscaModalAberto, setBuscaModalAberto] = useState(false);
   const [mostrarPerfil, setMostrarPerfil] = useState(false);
-  
+
   const isSettingsActive = pathname === '/configuracoes' || pathname.startsWith('/configuracoes/');
+
+  // Fechar drawer ao mudar de rota
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
+
+  // Fechar dropdown de perfil ao mudar de rota
+  useEffect(() => {
+    setMostrarPerfil(false);
+  }, [pathname]);
 
   const handleBusca = (valor: string) => {
     setBusca(valor);
     onSearch?.(valor);
   };
 
+  const handleBuscaModal = (valor: string) => {
+    setBusca(valor);
+    onSearch?.(valor);
+  };
+
+  const NavItem = ({ item }: { item: typeof navigation[0] }) => {
+    const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
+    return (
+      <Link
+        href={item.href}
+        className={`relative rounded-lg px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-all duration-200 ${
+          isActive
+            ? 'text-blue-600 bg-blue-50 before:absolute before:left-0 before:w-1 before:h-6 before:bg-blue-600 before:rounded-r'
+            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+        }`}
+      >
+        <span className="material-symbols-outlined text-xl shrink-0">
+          {item.icon}
+        </span>
+        <span className="truncate">{item.label}</span>
+      </Link>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-950">
-      {/* ========== SIDEBAR (DESKTOP) ========== */}
-      <aside className="fixed inset-y-0 left-0 hidden lg:flex w-64 border-r border-slate-200 bg-white flex-col justify-between py-6 z-50">
+      {/* ========== SIDEBAR (DESKTOP + MOBILE DRAWER) ========== */}
+      <aside
+        className={`fixed inset-y-0 left-0 w-64 border-r border-slate-200 bg-white flex-col justify-between py-6 z-50 transition-transform duration-300 flex ${
+          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+        }`}
+      >
         <div className="px-6 py-4 text-center border-b border-slate-200 mb-4">
           <h1 className="text-2xl font-bold text-blue-600">Autônomo +</h1>
           <p className="text-xs text-slate-500 mt-1 font-medium">Gestão de Serviços</p>
         </div>
 
         <nav className="flex flex-col gap-1 flex-1 px-3 overflow-y-auto">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`relative rounded-lg px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-all duration-200 ${
-                  isActive
-                    ? 'text-blue-600 bg-blue-50 before:absolute before:left-0 before:w-1 before:h-6 before:bg-blue-600 before:rounded-r'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-                }`}
-              >
-                <span className="material-symbols-outlined text-xl shrink-0">
-                  {item.icon}
-                </span>
-                <span className="truncate">{item.label}</span>
-              </Link>
-            );
-          })}
+          {navigation.map((item) => (
+            <NavItem key={item.href} item={item} />
+          ))}
         </nav>
 
         <div className="px-3 border-t border-slate-200 pt-3">
@@ -79,19 +103,36 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
         </div>
       </aside>
 
+      {/* ========== OVERLAY (MOBILE) ========== */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-black/40 lg:hidden z-40"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ========== MAIN CONTENT ========== */}
-      <div className="lg:pl-64 pb-28 lg:pb-0">
+      <div className="lg:pl-64 pb-20 lg:pb-0">
         {/* ========== HEADER ========== */}
         <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur-sm">
-          <div className="flex items-center justify-between gap-4 px-4 py-3 lg:px-8">
-            {/* Logo Mobile */}
-            <div className="lg:hidden">
+          <div className="flex items-center justify-between gap-3 px-4 py-3 lg:px-8 lg:gap-4">
+            {/* Menu Mobile + Logo Mobile */}
+            <div className="flex items-center gap-3 lg:hidden">
+              <button
+                onClick={() => setSidebarOpen(!sidebarOpen)}
+                className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                aria-label="Menu"
+              >
+                <span className="material-symbols-outlined text-slate-600">
+                  {sidebarOpen ? 'close' : 'menu'}
+                </span>
+              </button>
               <h2 className="text-lg font-bold text-blue-600">A+</h2>
             </div>
 
-            {/* Campo de Busca */}
-            <div className="flex-1 max-w-md">
-              <div className="relative">
+            {/* Campo de Busca - Desktop e Tablet */}
+            <div className="hidden sm:flex flex-1 max-w-md">
+              <div className="relative w-full">
                 <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
                   search
                 </span>
@@ -105,8 +146,21 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
               </div>
             </div>
 
+            {/* Espaçador flex para desktop (empurra ações para a direita) */}
+            <div className="hidden sm:flex flex-1" />
+
             {/* Ações do Header */}
-            <div className="flex items-center gap-3 lg:gap-4">
+            <div className="flex items-center gap-2 lg:gap-3">
+              {/* Search Mobile - Ícone apenas */}
+              <button
+                onClick={() => setBuscaModalAberto(true)}
+                className="sm:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                aria-label="Buscar"
+              >
+                <span className="material-symbols-outlined text-slate-600">search</span>
+              </button>
+
+              {/* Calendar - Oculto em mobile */}
               <button
                 className="hidden sm:flex cursor-pointer text-slate-600 hover:text-blue-600 transition-colors p-2 hover:bg-slate-100 rounded-lg"
                 aria-label="Calendário"
@@ -114,12 +168,12 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                 <span className="material-symbols-outlined">calendar_today</span>
               </button>
 
+              {/* Notificações */}
               <button
                 className="relative cursor-pointer text-slate-600 hover:text-blue-600 transition-colors p-2 hover:bg-slate-100 rounded-lg"
                 aria-label="Notificações"
               >
                 <span className="material-symbols-outlined">notifications</span>
-                {/* Badge de notificações */}
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               </button>
 
@@ -183,8 +237,47 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
         </main>
       </div>
 
+      {/* ========== MODAL BUSCA (MOBILE) ========== */}
+      {buscaModalAberto && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-start pt-16 sm:hidden">
+          <div className="w-full mx-4 bg-white rounded-lg shadow-xl">
+            {/* Header */}
+            <div className="flex items-center gap-2 p-4 border-b border-slate-200">
+              <button
+                onClick={() => setBuscaModalAberto(false)}
+                className="p-1 hover:bg-slate-100 rounded-lg"
+                aria-label="Fechar"
+              >
+                <span className="material-symbols-outlined text-slate-600">arrow_back</span>
+              </button>
+              <div className="flex-1 relative">
+                <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
+                  search
+                </span>
+                <input
+                  autoFocus
+                  type="text"
+                  placeholder="Buscar..."
+                  value={busca}
+                  onChange={(e) => handleBuscaModal(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
+                />
+              </div>
+            </div>
+
+            {/* Resultados/Sugestões */}
+            {busca && (
+              <div className="p-4 max-h-96 overflow-y-auto">
+                <p className="text-xs text-slate-500 mb-3">Resultados para "{busca}"</p>
+                {/* Adicionar seus componentes de resultado aqui */}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* ========== BOTTOM NAV (MOBILE) ========== */}
-      <nav className="fixed bottom-0 left-0 right-0 lg:hidden border-t border-slate-200 bg-white/95 backdrop-blur-sm z-50 w-full">
+      {/* <nav className="fixed bottom-0 left-0 right-0 lg:hidden border-t border-slate-200 bg-white/95 backdrop-blur-sm z-50 w-full">
         <ul className="flex flex-row justify-around items-stretch gap-0 px-0 py-1 list-none w-full">
           {navigation.map((item) => {
             const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -197,12 +290,11 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                     isActive ? 'text-blue-600' : 'text-slate-600 hover:text-slate-900'
                   }`}
                 >
-                  {/* Barra indicadora */}
                   {isActive && (
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-blue-600 rounded-full" />
                   )}
 
-                  <span className="material-symbols-outlined text-xl leading-none">
+                  <span className="material-symbols-outlined text-lg leading-none">
                     {item.icon}
                   </span>
 
@@ -212,7 +304,7 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
             );
           })}
         </ul>
-      </nav>
+      </nav> */}
     </div>
   );
 }
