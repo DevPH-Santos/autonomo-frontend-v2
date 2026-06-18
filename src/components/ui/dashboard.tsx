@@ -9,13 +9,14 @@
 
 import Link from "next/link";
 import { ReactNode } from "react";
+import { Icon, type IconName } from "@/components/ui/icon";
 
 interface KPICardProps {
-    icon: string;
+    icon: IconName;
     label: string;
     value: string;
     trend?: {
-        icon: string;
+        icon: IconName;
         percentage: number;
     };
 }
@@ -31,15 +32,11 @@ export function KPICard({
             {/* Header do card */}
             <div className="flex items-start justify-between mb-4">
                 <div className="p-2 bg-blue-100 rounded">
-                    <span className="material-symbols-outlined text-blue-600">
-                        {icon}
-                    </span>
+                    <Icon name={icon} className="text-blue-600" />
                 </div>
                 {trend && (
                     <div className="flex items-center gap-1 text-blue-600 font-bold text-sm">
-                        <span className="material-symbols-outlined text-base">
-                            {trend.icon}
-                        </span>
+                        <Icon name={trend.icon} className="text-base" />
                         {trend.percentage}%
                     </div>
                 )}
@@ -145,7 +142,7 @@ export function RouteCard({
 // ============================================================================
 
 interface AlertBannerProps {
-    icon: string;
+    icon: IconName;
     message: string;
     type?: "error" | "warning" | "success" | "info";
 }
@@ -167,9 +164,7 @@ export function AlertBanner({
             className={`py-3 px-5 border-2 rounded-2xl gap-3 flex items-center ${typeStyles[type]}`}
             role="alert"
         >
-            <span className="material-symbols-outlined" aria-hidden="true">
-                {icon}
-            </span>
+            <Icon name={icon} />
             {message}
         </div>
     );
@@ -183,7 +178,7 @@ interface SectionHeaderProps {
     title: string;
     description: string;
     alert?: {
-        icon: string;
+        icon: IconName;
         message: string;
     };
 }
@@ -317,7 +312,7 @@ export function RoutesSection({
                     className="flex items-center gap-1 text-blue-600 font-bold text-sm hover:text-blue-700"
                 >
                     Ver no mapa
-                    <span className="material-symbols-outlined text-base">map</span>
+                    <Icon name="map" className="text-base" />
                 </Link>
 
             </header>

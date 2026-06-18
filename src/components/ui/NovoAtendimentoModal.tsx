@@ -1,5 +1,6 @@
 'use client'
 
+import { Icon } from '@/components/ui/icon'
 import { useState } from 'react'
 
 interface Produto {
@@ -82,7 +83,7 @@ export function NovoAtendimentoModal({ isOpen, onClose }: NovoAtendimentoModalPr
             onClick={onClose}
             className="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-600"
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="close" />
           </button>
         </div>
 
@@ -102,9 +103,7 @@ export function NovoAtendimentoModal({ isOpen, onClose }: NovoAtendimentoModalPr
                   onChange={(e) => setCliente(e.target.value)}
                   className="w-full bg-slate-100 border-none focus:ring-2 focus:ring-blue-500/30 rounded-full py-3 px-4 font-medium transition-all focus:bg-white"
                 />
-                <span className="material-symbols-outlined absolute right-4 top-3 text-slate-400 pointer-events-none">
-                  person_search
-                </span>
+                <Icon name="person_search" className="absolute right-4 top-3 text-slate-400 pointer-events-none" />
               </div>
             </div>
 
@@ -167,14 +166,14 @@ export function NovoAtendimentoModal({ isOpen, onClose }: NovoAtendimentoModalPr
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <h4 className="font-bold text-lg text-slate-900 flex items-center gap-2">
-                <span className="material-symbols-outlined text-blue-600">science</span>
+                <Icon name="science" className="text-blue-600" />
                 Produtos utilizados
               </h4>
               <button
                 onClick={adicionarProduto}
                 className="text-blue-600 text-sm font-bold flex items-center gap-1 hover:underline transition-colors"
               >
-                <span className="material-symbols-outlined text-base">add_circle</span>
+                <Icon name="add_circle" className="text-base" />
                 Adicionar Produto
               </button>
             </div>
@@ -244,7 +243,7 @@ export function NovoAtendimentoModal({ isOpen, onClose }: NovoAtendimentoModalPr
                     onClick={() => removerProduto(produto.id)}
                     className="p-1.5 text-red-600 opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-50 rounded-full"
                   >
-                    <span className="material-symbols-outlined text-sm">delete</span>
+                    <Icon name="delete" className="text-sm" />
                   </button>
                 </div>
               ))}
@@ -285,7 +284,7 @@ export function NovoAtendimentoModal({ isOpen, onClose }: NovoAtendimentoModalPr
             onClick={handleSalvar}
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-full font-extrabold shadow-lg shadow-blue-600/20 active:scale-95 transition-all flex items-center gap-2"
           >
-            <span className="material-symbols-outlined text-base">save</span>
+            <Icon name="save" className="text-base" />
             Salvar Atendimento
           </button>
         </div>

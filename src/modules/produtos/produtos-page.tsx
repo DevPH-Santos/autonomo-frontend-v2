@@ -15,6 +15,7 @@
 
 'use client'
 
+import { Icon } from '@/components/ui/icon'
 import { useState } from 'react'
 import { NovoProdutoModal } from "@/components/ui/NovoProdutoModal"
 
@@ -150,7 +151,7 @@ export function ProdutosPage() {
             onClick={() => setModalAberto(true)}
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-lg transition-colors w-full sm:w-auto"
           >
-            <span className="material-symbols-outlined">add</span>
+            <Icon name="add" />
             Novo Produto
           </button>
         </section>
@@ -241,9 +242,7 @@ export function ProdutosPage() {
                         className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-blue-600 hover:bg-blue-100/50 transition-colors"
                         title="Editar produto"
                       >
-                        <span className="material-symbols-outlined text-base">
-                          edit
-                        </span>
+                        <Icon name="edit" className="text-base" />
                       </button>
 
                       {/* Botão: Deletar produto */}
@@ -251,9 +250,7 @@ export function ProdutosPage() {
                         className="w-8 h-8 rounded-full flex items-center justify-center text-slate-500 hover:text-red-600 hover:bg-red-100/50 transition-colors"
                         title="Deletar produto"
                       >
-                        <span className="material-symbols-outlined text-base">
-                          delete
-                        </span>
+                        <Icon name="delete" className="text-base" />
                       </button>
                     </div>
                   </td>
@@ -277,9 +274,7 @@ export function ProdutosPage() {
           {/* Card 1: Total de Produtos Cadastrados */}
           <div className="bg-sky-100/30 p-8 rounded-2xl flex flex-col gap-3 border border-sky-200/50">
             {/* Ícone do card (inventário/estoque) */}
-            <span className="material-symbols-outlined text-blue-600 text-2xl w-fit">
-              inventory
-            </span>
+            <Icon name="inventory" className="text-blue-600 text-2xl w-fit" />
 
             {/* Número total de produtos com formatação (2 dígitos) */}
             {/* 
@@ -297,9 +292,7 @@ export function ProdutosPage() {
           {/* Card 2: Custo Médio por Unidade */}
           <div className="bg-slate-100 p-8 rounded-2xl flex flex-col gap-3 border border-slate-200">
             {/* Ícone do card (carrinho de compras) */}
-            <span className="material-symbols-outlined text-slate-600 text-2xl w-fit">
-              shopping_cart
-            </span>
+            <Icon name="shopping_cart" className="text-slate-600 text-2xl w-fit" />
 
             {/* Valor do custo médio */}
             <h3 className="font-bold text-3xl text-slate-900">{custoMedio}</h3>
@@ -315,9 +308,7 @@ export function ProdutosPage() {
           */}
           <div className="bg-slate-200/40 p-8 rounded-2xl flex flex-col gap-3 border border-slate-300/50 group hover:bg-blue-50/40 transition-colors">
             {/* Ícone do card (gráfico de crescimento) */}
-            <span className="material-symbols-outlined text-purple-600 text-2xl w-fit">
-              trending_up
-            </span>
+            <Icon name="trending_up" className="text-purple-600 text-2xl w-fit" />
 
             {/* Status atual do inventário */}
             <h3 className="font-bold text-3xl text-slate-900">{status}</h3>

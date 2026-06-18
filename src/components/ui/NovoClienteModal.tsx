@@ -1,5 +1,6 @@
 'use client'
 
+import { Icon } from '@/components/ui/icon'
 import { useState } from 'react'
 
 interface NovoClienteModalProps {
@@ -97,7 +98,7 @@ export function NovoClienteModal({ isOpen, onClose }: NovoClienteModalProps) {
         <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white px-6 py-5">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-sky-100">
-              <span className="material-symbols-outlined text-sky-700">person_add</span>
+              <Icon name="person_add" className="text-sky-700" />
             </div>
             <h2 className="text-xl font-bold text-slate-900">Novo Cliente</h2>
           </div>
@@ -105,7 +106,7 @@ export function NovoClienteModal({ isOpen, onClose }: NovoClienteModalProps) {
             onClick={onClose}
             className="p-1 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="close" />
           </button>
         </div>
 
@@ -335,7 +336,7 @@ export function NovoClienteModal({ isOpen, onClose }: NovoClienteModalProps) {
             onClick={handleSave}
             className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-lg"
           >
-            <span className="material-symbols-outlined">save</span>
+            <Icon name="save" />
             Salvar Cliente
           </button>
         </div>

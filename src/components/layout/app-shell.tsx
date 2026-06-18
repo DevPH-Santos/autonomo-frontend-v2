@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useState, useEffect } from 'react';
+import { Icon, type IconName } from '../ui/icon';
 
 const navigation = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -12,7 +13,13 @@ const navigation = [
   { href: '/pagamentos', label: 'Pagamentos', icon: 'payments' },
   { href: '/produtos', label: 'Produtos', icon: 'inventory_2' },
   { href: '/lembretes', label: 'Lembretes', icon: 'add_notes' },
-];
+] as const satisfies ReadonlyArray<{
+  href: string;
+  label: string;
+  icon: IconName;
+}>;
+
+type NavigationItem = (typeof navigation)[number];
 
 interface AppShellProps {
   children: ReactNode;
@@ -48,20 +55,17 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
     onSearch?.(valor);
   };
 
-  const NavItem = ({ item }: { item: typeof navigation[0] }) => {
+  const NavItem = ({ item }: { item: NavigationItem }) => {
     const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
     return (
       <Link
         href={item.href}
-        className={`relative rounded-lg px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-all duration-200 ${
-          isActive
-            ? 'text-blue-600 bg-blue-50 before:absolute before:left-0 before:w-1 before:h-6 before:bg-blue-600 before:rounded-r'
-            : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-        }`}
+        className={`relative rounded-lg px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-all duration-200 ${isActive
+          ? 'text-blue-600 bg-blue-50 before:absolute before:left-0 before:w-1 before:h-6 before:bg-blue-600 before:rounded-r'
+          : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+          }`}
       >
-        <span className="material-symbols-outlined text-xl shrink-0">
-          {item.icon}
-        </span>
+        <Icon name={item.icon} className="shrink-0" />
         <span className="truncate">{item.label}</span>
       </Link>
     );
@@ -71,9 +75,8 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
     <div className="min-h-screen bg-slate-50 text-slate-950">
       {/* ========== SIDEBAR (DESKTOP + MOBILE DRAWER) ========== */}
       <aside
-        className={`fixed inset-y-0 left-0 w-64 border-r border-slate-200 bg-white flex-col justify-between py-6 z-50 transition-transform duration-300 flex ${
-          sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
-        }`}
+        className={`fixed inset-y-0 left-0 w-64 border-r border-slate-200 bg-white flex-col justify-between py-6 z-50 transition-transform duration-300 flex ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
+          }`}
       >
         <div className="px-6 py-4 text-center border-b border-slate-200 mb-4">
           <h1 className="text-2xl font-bold text-blue-600">Autônomo +</h1>
@@ -89,15 +92,12 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
         <div className="px-3 border-t border-slate-200 pt-3">
           <Link
             href="/configuracoes"
-            className={`relative rounded-lg px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-all duration-200 ${
-              isSettingsActive
-                ? 'text-blue-600 bg-blue-50 before:absolute before:left-0 before:w-1 before:h-6 before:bg-blue-600 before:rounded-r'
-                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-            }`}
+            className={`relative rounded-lg px-4 py-2.5 text-sm font-medium flex items-center gap-3 transition-all duration-200 ${isSettingsActive
+              ? 'text-blue-600 bg-blue-50 before:absolute before:left-0 before:w-1 before:h-6 before:bg-blue-600 before:rounded-r'
+              : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+              }`}
           >
-            <span className="material-symbols-outlined text-xl shrink-0">
-              settings
-            </span>
+            <Icon name="settings" className="shrink-0" />
             <span className="truncate">Configurações</span>
           </Link>
         </div>
@@ -123,9 +123,7 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                 className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
                 aria-label="Menu"
               >
-                <span className="material-symbols-outlined text-slate-600">
-                  {sidebarOpen ? 'close' : 'menu'}
-                </span>
+                <Icon name={sidebarOpen ? 'close' : 'menu'} />
               </button>
               <h2 className="text-lg font-bold text-blue-600">A+</h2>
             </div>
@@ -133,9 +131,7 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
             {/* Campo de Busca - Desktop e Tablet */}
             <div className="hidden sm:flex flex-1 max-w-md">
               <div className="relative w-full">
-                <span className="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-                  search
-                </span>
+                <Icon name="search" className='absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg' />
                 <input
                   type="text"
                   placeholder="Buscar..."
@@ -157,7 +153,7 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                 className="sm:hidden p-2 hover:bg-slate-100 rounded-lg transition-colors"
                 aria-label="Buscar"
               >
-                <span className="material-symbols-outlined text-slate-600">search</span>
+                <Icon name="search" />
               </button>
 
               {/* Calendar - Oculto em mobile */}
@@ -165,7 +161,7 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                 className="hidden sm:flex cursor-pointer text-slate-600 hover:text-blue-600 transition-colors p-2 hover:bg-slate-100 rounded-lg"
                 aria-label="Calendário"
               >
-                <span className="material-symbols-outlined">calendar_today</span>
+                <Icon name="calendar_today" />
               </button>
 
               {/* Notificações */}
@@ -173,7 +169,7 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                 className="relative cursor-pointer text-slate-600 hover:text-blue-600 transition-colors p-2 hover:bg-slate-100 rounded-lg"
                 aria-label="Notificações"
               >
-                <span className="material-symbols-outlined">notifications</span>
+                <Icon name="notifications" />
                 <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full" />
               </button>
 
@@ -184,7 +180,7 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                   className="w-10 h-10 bg-blue-600 text-white flex items-center justify-center rounded-full hover:bg-blue-700 transition-colors shrink-0"
                   aria-label="Perfil"
                 >
-                  <span className="material-symbols-outlined text-xl">person</span>
+                  <Icon name="person" />
                 </button>
 
                 {/* Menu Dropdown de Perfil */}
@@ -205,22 +201,18 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                         href="/configuracoes"
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
                       >
-                        <span className="material-symbols-outlined text-lg">
-                          account_circle
-                        </span>
+                        <Icon name="account_circle" className="text-lg" />
                         Meu Perfil
                       </Link>
                       <Link
                         href="/configuracoes"
                         className="flex items-center gap-3 px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-100 transition-colors"
                       >
-                        <span className="material-symbols-outlined text-lg">
-                          settings
-                        </span>
+                        <Icon name="settings" className="text-lg" />
                         Configurações
                       </Link>
                       <button className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left w-full">
-                        <span className="material-symbols-outlined text-lg">logout</span>
+                        <Icon name="logout" className="text-lg" />
                         Sair
                       </button>
                     </nav>
@@ -248,12 +240,10 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                 className="p-1 hover:bg-slate-100 rounded-lg"
                 aria-label="Fechar"
               >
-                <span className="material-symbols-outlined text-slate-600">arrow_back</span>
+                <Icon name="arrow_back" className="text-slate-600" />
               </button>
               <div className="flex-1 relative">
-                <span className="material-symbols-outlined absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-lg">
-                  search
-                </span>
+                <Icon name="search" className="absolute left-2 top-1/2 -translate-y-1/2 text-slate-400 text-lg" />
                 <input
                   autoFocus
                   type="text"
@@ -294,9 +284,7 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                     <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-blue-600 rounded-full" />
                   )}
 
-                  <span className="material-symbols-outlined text-lg leading-none">
-                    {item.icon}
-                  </span>
+                  <Icon name={item.icon} className="text-lg leading-none" />
 
                   <span className="truncate w-full px-1">{item.label}</span>
                 </Link>

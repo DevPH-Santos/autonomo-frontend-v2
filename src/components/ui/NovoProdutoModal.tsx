@@ -1,5 +1,6 @@
 'use client'
 
+import { Icon } from '@/components/ui/icon'
 import { useState } from 'react'
 
 interface NovoProdutoModalProps {
@@ -56,7 +57,7 @@ export function NovoProdutoModal({ isOpen, onClose }: NovoProdutoModalProps) {
             onClick={onClose}
             className="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors text-slate-600"
           >
-            <span className="material-symbols-outlined">close</span>
+            <Icon name="close" />
           </button>
         </div>
 

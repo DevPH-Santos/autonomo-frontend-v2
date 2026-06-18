@@ -16,6 +16,7 @@
 
 'use client'
 
+import { Icon } from '@/components/ui/icon'
 import { useState } from 'react'
 import { EditarPagamentoModal } from '@/components/ui/EditarPagamentoModal'
 
@@ -232,7 +233,7 @@ export function PagamentosPage() {
           <div className="flex items-center justify-between mb-4">
             {/* Ícone do card (carteira) */}
             <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center">
-              <span className="material-symbols-outlined">account_balance_wallet</span>
+              <Icon name="account_balance_wallet" />
             </div>
             {/* Badge de crescimento (+12%) */}
             <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
@@ -250,7 +251,7 @@ export function PagamentosPage() {
           <div className="flex items-center justify-between mb-4">
             {/* Ícone do card (ações pendentes) */}
             <div className="w-12 h-12 bg-sky-100 text-blue-600 rounded-full flex items-center justify-center">
-              <span className="material-symbols-outlined">pending_actions</span>
+              <Icon name="pending_actions" />
             </div>
             {/* Badge de período */}
             <span className="text-xs font-bold text-blue-600 bg-sky-100/60 px-2 py-1 rounded-lg">
@@ -268,7 +269,7 @@ export function PagamentosPage() {
           <div className="flex items-center justify-between mb-4">
             {/* Ícone do card (aviso) */}
             <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
-              <span className="material-symbols-outlined">warning</span>
+              <Icon name="warning" />
             </div>
             {/* Badge de atenção */}
             <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-lg">
@@ -294,7 +295,7 @@ export function PagamentosPage() {
       <section className="bg-slate-100 p-5 rounded-2xl flex flex-wrap items-center gap-4">
         {/* Rótulo de filtros */}
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-slate-600 text-lg">filter_list</span>
+          <Icon name="filter_list" className="text-slate-600 text-lg" />
           <span className="text-sm font-semibold text-slate-600 mr-2">Filtros:</span>
         </div>
 
@@ -334,7 +335,7 @@ export function PagamentosPage() {
           }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-xs font-bold shadow-md transition-colors flex items-center gap-2 whitespace-nowrap"
         >
-          <span className="material-symbols-outlined text-sm">add</span>
+          <Icon name="add" className="text-sm" />
           Novo Lançamento
         </button>
       </section>
@@ -428,7 +429,7 @@ export function PagamentosPage() {
                         className="text-slate-500 hover:text-blue-600 transition-colors"
                         title="Editar pagamento"
                       >
-                        <span className="material-symbols-outlined text-lg">edit</span>
+                        <Icon name="edit" className="text-lg" />
                       </button>
 
                       {/* Botão: Deletar pagamento */}
@@ -436,7 +437,7 @@ export function PagamentosPage() {
                         className="text-slate-500 hover:text-red-600 transition-colors"
                         title="Deletar pagamento"
                       >
-                        <span className="material-symbols-outlined text-lg">delete</span>
+                        <Icon name="delete" className="text-lg" />
                       </button>
                     </div>
                   </td>
@@ -465,7 +466,7 @@ export function PagamentosPage() {
               disabled={paginaAtual === 1} // Desabilita se já estamos na primeira página
               className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
-              <span className="material-symbols-outlined text-lg">chevron_left</span>
+              <Icon name="chevron_left" className="text-lg" />
             </button>
 
             {/* Botões: Números de página (1, 2, 3) */}
@@ -488,7 +489,7 @@ export function PagamentosPage() {
               onClick={() => setPaginaAtual(paginaAtual + 1)}
               className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors"
             >
-              <span className="material-symbols-outlined text-lg">chevron_right</span>
+              <Icon name="chevron_right" className="text-lg" />
             </button>
           </div>
         </div>

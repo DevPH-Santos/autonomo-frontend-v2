@@ -1,6 +1,7 @@
 'use client'
 
 import Grafico from "@/components/ui/grafico";
+import type { IconName } from "@/components/ui/icon";
 
 import {
   KPICard,
@@ -26,12 +27,12 @@ interface Client {
   revenue: string;
 }
 
-interface KPICard {
-  icon: string;
+interface DashboardKPICard {
+  icon: IconName;
   label: string;
   value: string;
   trend?: {
-    icon: string;
+    icon: IconName;
     percentage: number;
   };
 }
@@ -41,7 +42,7 @@ export function DashboardPage(): ReactNode {
     "monthly"
   );
 
-  const kpiCards: KPICard[] = [
+  const kpiCards: DashboardKPICard[] = [
     {
       icon: "payments",
       label: "RECEITA MENSAL",

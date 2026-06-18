@@ -1,5 +1,6 @@
 'use client'
 
+import { Icon, type IconName } from '@/components/ui/icon'
 import { useState } from 'react'
 import { NovoAtendimentoModal } from "@/components/ui/NovoAtendimentoModal"
 
@@ -119,13 +120,13 @@ function ActionButtons({ status }: { status: 'realizado' | 'pendente' }) {
         title="Ver detalhes"
         className="p-2 rounded-lg text-blue-600 hover:bg-sky-100 transition-colors"
       >
-        <span className="material-symbols-outlined text-lg">visibility</span>
+        <Icon name="visibility" className="text-lg" />
       </button>
       <button
         title="Editar"
         className="p-2 rounded-lg text-slate-600 hover:bg-slate-200 transition-colors"
       >
-        <span className="material-symbols-outlined text-lg">edit</span>
+        <Icon name="edit" className="text-lg" />
       </button>
       <button
         title="Marcar como realizado"
@@ -135,13 +136,13 @@ function ActionButtons({ status }: { status: 'realizado' | 'pendente' }) {
             : 'text-emerald-600 hover:bg-emerald-50'
         }`}
       >
-        <span className="material-symbols-outlined text-lg">check_circle</span>
+        <Icon name="check_circle" className="text-lg" />
       </button>
     </div>
   )
 }
 
-function FilterSelect({ options, icon }: { options: string[]; icon: string }) {
+function FilterSelect({ options, icon }: { options: string[]; icon: IconName }) {
   return (
     <div className="relative">
       <select className="appearance-none bg-white border border-slate-200 rounded-lg px-3 py-2 pr-8 text-sm font-medium text-slate-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20">
@@ -149,9 +150,7 @@ function FilterSelect({ options, icon }: { options: string[]; icon: string }) {
           <option key={opt}>{opt}</option>
         ))}
       </select>
-      <span className="material-symbols-outlined absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none">
-        {icon}
-      </span>
+      <Icon name={icon} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
     </div>
   )
 }
@@ -177,7 +176,7 @@ export function AtendimentosPage() {
           onClick={() => setModalAberto(true)}
           className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-lg transition-colors w-full sm:w-auto"
         >
-          <span className="material-symbols-outlined">add</span>
+          <Icon name="add" />
           Novo Atendimento
         </button>
       </section>
@@ -213,11 +212,11 @@ export function AtendimentosPage() {
           {/* Navegador de Data */}
           <div className="flex items-center gap-2">
             <button className="p-1.5 rounded-lg hover:bg-slate-300 transition-colors" aria-label="Dia anterior">
-              <span className="material-symbols-outlined">chevron_left</span>
+              <Icon name="chevron_left" />
             </button>
             <span className="font-semibold text-slate-900 whitespace-nowrap text-sm">{currentDate}</span>
             <button className="p-1.5 rounded-lg hover:bg-slate-300 transition-colors" aria-label="Próximo dia">
-              <span className="material-symbols-outlined">chevron_right</span>
+              <Icon name="chevron_right" />
             </button>
           </div>
         </div>
@@ -319,11 +318,11 @@ export function AtendimentosPage() {
         </p>
         <div className="flex items-center gap-4">
           <button className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">
-            <span className="material-symbols-outlined">download</span>
+            <Icon name="download" />
             Exportar Relatório
           </button>
           <button className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">
-            <span className="material-symbols-outlined">print</span>
+            <Icon name="print" />
             Imprimir Agenda
           </button>
         </div>

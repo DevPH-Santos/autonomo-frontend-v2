@@ -1,5 +1,6 @@
 'use client'
 
+import { Icon } from '@/components/ui/icon'
 import { useState } from 'react'
 
 interface Pagamento {
@@ -113,7 +114,7 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
                         onClick={onClose}
                         className="text-slate-500 hover:text-slate-900 p-2 rounded-full transition-colors"
                     >
-                        <span className="material-symbols-outlined">close</span>
+                        <Icon name="close" />
                     </button>
                 </div>
 
@@ -131,9 +132,7 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
                                 readOnly
                                 className="w-full bg-slate-100 border-none rounded-full px-5 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                             />
-                            <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                                search
-                            </span>
+                            <Icon name="search" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                         </div>
                     </div>
 
@@ -156,9 +155,7 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
                                         </option>
                                     ))}
                                 </select>
-                                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                                    expand_more
-                                </span>
+                                <Icon name="expand_more" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                             </div>
                         </div>
 
@@ -212,9 +209,7 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
                                     <option value="cartao">Cartão</option>
                                     <option value="boleto">Boleto</option>
                                 </select>
-                                <span className="material-symbols-outlined absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
-                                    payments
-                                </span>
+                                <Icon name="payments" className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
                             </div>
                         </div>
                     </div>
@@ -241,7 +236,7 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
                                             : 'bg-slate-200 text-slate-700'
                                         }`}
                                 >
-                                    <span className="material-symbols-outlined text-lg">check_circle</span>
+                                    <Icon name="check_circle" className="text-lg" />
                                     <span>Pago</span>
                                 </div>
                             </label>
@@ -262,7 +257,7 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
                                             : 'bg-slate-200 text-slate-700'
                                         }`}
                                 >
-                                    <span className="material-symbols-outlined text-lg">schedule</span>
+                                    <Icon name="schedule" className="text-lg" />
                                     <span>Pendente</span>
                                 </div>
                             </label>
@@ -283,7 +278,7 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
                                             : 'bg-slate-200 text-slate-700'
                                         }`}
                                 >
-                                    <span className="material-symbols-outlined text-lg">warning</span>
+                                    <Icon name="warning" className="text-lg" />
                                     <span>Atrasado</span>
                                 </div>
                             </label>

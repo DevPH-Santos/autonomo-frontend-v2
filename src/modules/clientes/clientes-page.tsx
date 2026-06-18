@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useMemo } from 'react'
+import { Icon } from '@/components/ui/icon'
 import { NovoClienteModal } from '@/components/ui/NovoClienteModal'
 
 interface Cliente {
@@ -155,7 +156,7 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
           onClick={() => setModalAberto(true)}
           className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-lg transition-colors w-full sm:w-auto"
         >
-          <span className="material-symbols-outlined">add</span>
+          <Icon name="add" />
           Novo Cliente
         </button>
       </section>
@@ -163,9 +164,7 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
       {/* ===== BARRA DE FILTROS ===== */}
       <section className="bg-slate-100 rounded-lg p-4 sm:p-6 space-y-4 sm:space-y-0 sm:flex sm:items-center sm:gap-6 flex-wrap">
         <div className="flex items-center gap-2">
-          <span className="material-symbols-outlined text-slate-600">
-            filter_list
-          </span>
+          <Icon name="filter_list" className="text-slate-600" />
           <span className="text-xs font-bold uppercase text-slate-600 tracking-wide">
             Filtros
           </span>
@@ -324,25 +323,19 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
                           title="Visualizar"
                           className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 hover:text-blue-600 transition-colors"
                         >
-                          <span className="material-symbols-outlined text-lg">
-                            visibility
-                          </span>
+                          <Icon name="visibility" className="text-lg" />
                         </button>
                         <button
                           title="Editar"
                           className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 hover:text-blue-600 transition-colors"
                         >
-                          <span className="material-symbols-outlined text-lg">
-                            edit
-                          </span>
+                          <Icon name="edit" className="text-lg" />
                         </button>
                         <button
                           title="Deletar"
                           className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors"
                         >
-                          <span className="material-symbols-outlined text-lg">
-                            delete
-                          </span>
+                          <Icon name="delete" className="text-lg" />
                         </button>
                       </div>
                     </td>
@@ -352,9 +345,7 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
                 <tr>
                   <td colSpan={7} className="px-6 py-12 text-center">
                     <div className="flex flex-col items-center justify-center gap-3">
-                      <span className="material-symbols-outlined text-5xl text-slate-300">
-                        search_off
-                      </span>
+                      <Icon name="search_off" className="text-5xl text-slate-300" />
                       <p className="text-slate-500 font-medium">
                         Nenhum cliente encontrado
                       </p>
@@ -388,7 +379,7 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
                 className="w-8 h-8 flex items-center justify-center rounded text-xs font-medium text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 title="Página anterior"
               >
-                <span className="material-symbols-outlined">chevron_left</span>
+                <Icon name="chevron_left" />
               </button>
 
               {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(
@@ -415,7 +406,7 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
                 className="w-8 h-8 flex items-center justify-center rounded text-xs font-medium text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
                 title="Próxima página"
               >
-                <span className="material-symbols-outlined">chevron_right</span>
+                <Icon name="chevron_right" />
               </button>
             </div>
           </div>
