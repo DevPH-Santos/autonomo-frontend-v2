@@ -1,10 +1,10 @@
-# PoolManager
+# Autonomo+
 
 Sistema de gestão para piscineiros e prestadores de serviços autônomos, desenvolvido como Trabalho de Conclusão de Curso (TCC).
 
 ## 📋 Sobre o Projeto
 
-O PoolManager foi criado para auxiliar profissionais autônomos no gerenciamento de seus clientes, atendimentos, pagamentos, produtos utilizados e despesas operacionais.
+O Autonomo+ foi criado para auxiliar profissionais autônomos no gerenciamento de seus clientes, atendimentos, pagamentos, produtos utilizados e despesas operacionais.
 
 O sistema busca substituir controles feitos em cadernos, planilhas ou aplicativos genéricos, oferecendo uma solução centralizada para acompanhamento do negócio e análise de lucratividade.
 
@@ -136,6 +136,12 @@ npm run dev
 ## 👨‍💻 Equipe
 
 Projeto desenvolvido como Trabalho de Conclusão de Curso (TCC) pelos alunos da ETEC.
+### Equipe de Desenvolvimento:
+  * Pedro Santos -> Programador Full Stack
+  * Maria Júlia -> Analista Banco de Dados
+  * Lívia Gabrielly -> Auxiliadora Analista de Dados
+  * Victória da Silva -> Documentadora
+  * Emanuel -> Documentador Diário de Bordo
 
 ## 📄 Licença
 
