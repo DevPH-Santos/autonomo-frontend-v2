@@ -106,3 +106,16 @@ export function logout(): void {
   localStorage.removeItem("token");
   localStorage.removeItem("usuario");
 }
+
+/**
+ * Recupera os dados do usuário salvos no localStorage
+ */
+export function obterUsuarioLogado(): Usuario | null {
+  try {
+    const usuarioJson = localStorage.getItem("usuario");
+    return usuarioJson ? JSON.parse(usuarioJson) : null;
+  } catch (error) {
+    console.error("Erro ao recuperar usuário do localStorage:", error);
+    return null;
+  }
+}

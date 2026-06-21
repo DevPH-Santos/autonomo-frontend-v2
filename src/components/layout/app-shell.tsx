@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useState, useEffect } from 'react';
 import { Icon, type IconName } from '../ui/icon';
-import { logout } from "@/services/authService"
+import { logout, obterUsuarioLogado, type Usuario } from "@/services/authService"
 
 const navigation = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -33,8 +33,15 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
   const [busca, setBusca] = useState('');
   const [buscaModalAberto, setBuscaModalAberto] = useState(false);
   const [mostrarPerfil, setMostrarPerfil] = useState(false);
+  const [usuario, setUsuario] = useState<Usuario | null>(null);
 
   const isSettingsActive = pathname === '/configuracoes' || pathname.startsWith('/configuracoes/');
+
+  // Carregar dados do usuário do localStorage
+  useEffect(() => {
+    const usuarioLogado = obterUsuarioLogado();
+    setUsuario(usuarioLogado);
+  }, []);
 
   // Fechar drawer ao mudar de rota
   useEffect(() => {
@@ -195,10 +202,14 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                     className="absolute top-12 right-0 w-56 bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg shadow-lg overflow-hidden z-50"
                     onClick={() => setMostrarPerfil(false)}
                   >
-                    {/* Header do Menu */}
+                    {/* ✅ Dados reais do localStorage */}
                     <div className="px-4 py-3 border-b border-slate-200 bg-slate-50">
-                      <p className="font-semibold text-sm text-slate-900">João da Silva</p>
-                      <p className="text-xs text-slate-500 mt-0.5">Administrador</p>
+                      <p className="font-semibold text-sm text-slate-900">
+                        {usuario?.nome || "Carregando..."}
+                      </p>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        {usuario?.email || "—"}
+                      </p>
                     </div>
 
                     {/* Opções */}
@@ -217,7 +228,10 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                         <Icon name="settings" className="text-lg" />
                         Configurações
                       </Link>
-                      <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left w-full">
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left w-full"
+                      >
                         <Icon name="logout" className="text-lg" />
                         Sair
                       </button>
