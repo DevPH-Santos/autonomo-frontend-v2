@@ -73,8 +73,24 @@ a {
   }
 }
 
+@keyframes loginCardIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @layer utilities {
   .animate-fadeNavBottom {
     animation: fadeNavBottom 0.3s ease-in-out;
+  }
+
+  .animate-login-card-in {
+    animation: loginCardIn 0.8s cubic-bezier(0.16, 1, 0.3, 1);
   }
 }

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { ReactNode, useState, useEffect } from 'react';
 import { Icon, type IconName } from '../ui/icon';
+import { logout } from "@/services/authService"
 
 const navigation = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -54,6 +55,11 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
     setBusca(valor);
     onSearch?.(valor);
   };
+
+  const handleLogout = () => {
+    logout()
+    window.location.href = "/login"
+  }
 
   const NavItem = ({ item }: { item: NavigationItem }) => {
     const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
@@ -211,7 +217,7 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
                         <Icon name="settings" className="text-lg" />
                         Configurações
                       </Link>
-                      <button className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left w-full">
+                      <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors text-left w-full">
                         <Icon name="logout" className="text-lg" />
                         Sair
                       </button>
@@ -265,34 +271,6 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
           </div>
         </div>
       )}
-
-      {/* ========== BOTTOM NAV (MOBILE) ========== */}
-      {/* <nav className="fixed bottom-0 left-0 right-0 lg:hidden border-t border-slate-200 bg-white/95 backdrop-blur-sm z-50 w-full">
-        <ul className="flex flex-row justify-around items-stretch gap-0 px-0 py-1 list-none w-full">
-          {navigation.map((item) => {
-            const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);
-
-            return (
-              <li key={item.href} className="flex-1 min-w-0">
-                <Link
-                  href={item.href}
-                  className={`relative flex flex-col justify-center items-center gap-1 py-2 px-1 text-center text-[10px] font-semibold transition-all duration-200 h-full ${
-                    isActive ? 'text-blue-600' : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  {isActive && (
-                    <div className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-1 bg-blue-600 rounded-full" />
-                  )}
-
-                  <Icon name={item.icon} className="text-lg leading-none" />
-
-                  <span className="truncate w-full px-1">{item.label}</span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav> */}
     </div>
   );
 }
