@@ -1,3 +1,4 @@
+import { refresh } from 'next/cache';
 import type { CSSProperties } from 'react';
 
 export const icons = {
@@ -31,6 +32,7 @@ export const icons = {
   person_search: 'person_search',
   products: 'products',
   products_check: 'products_check',
+  refresh: 'refresh',
   save: 'save',
   science: 'science',
   search: 'search',
