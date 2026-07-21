@@ -1,4 +1,3 @@
-import { error } from "console";
 import { apiFetch } from "./api";
 import { obterUsuarioLogado } from "./authService";
 

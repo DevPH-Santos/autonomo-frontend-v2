@@ -5,6 +5,7 @@ import { Icon } from '@/components/ui/icon'
 import { ClienteModal } from '@/components/ui/ClienteModal'
 import { listarClientes, deletarCliente, atualizarCliente, Cliente } from '@/services/clienteService'
 import { DeletarClienteModal } from '@/components/ui/DeletarClienteModal'
+import { formatarValor } from '@/services/formatters'
 
 interface ClienteExibicao extends Cliente {
   iniciais: string
@@ -148,14 +149,6 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
     carregarClientes()
     resetPaginacao()
     handleFecharModalDelete()
-  }
-
-  const formatarValorVisita = (valor: number | string): string => {
-    if (!valor) return '0,00'
-    const valorNumerico = typeof valor === 'string' ? parseFloat(valor) : valor
-    const [inteiros, decimais] = valorNumerico.toFixed(2).split('.')
-    const integrosFormatados = inteiros.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
-    return `${integrosFormatados}, ${decimais}`
   }
 
   if (carregando) {
@@ -369,7 +362,7 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
 
                       {/* Valor */}
                       <td className="px-4 py-4 text-sm font-bold text-sky-700">
-                        R$ {formatarValorVisita(cliente.valor_visita_cliente)}
+                        R$ {formatarValor(cliente.valor_visita_cliente)}
                       </td>
 
                       {/* Status */}
