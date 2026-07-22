@@ -5,6 +5,7 @@ export const icons = {
   add: 'add',
   add_circle: 'add_circle',
   add_notes: 'add_notes',
+  assignment: 'assignment',
   atendimentos: 'atendimentos',
   calendar_today: 'calendar_today',
   cart: 'cart',
