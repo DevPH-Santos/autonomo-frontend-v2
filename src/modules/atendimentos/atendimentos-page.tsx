@@ -3,6 +3,7 @@
 import { Icon, type IconName } from '@/components/ui/icon'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { NovoAtendimentoModal } from '@/components/ui/NovoAtendimentoModal'
+import { AtendimentoModal } from '@/components/ui/AtendimentoModal'
 import {
   atualizarAtendimento,
   deletarAtendimento,
@@ -161,35 +162,28 @@ function ClientAvatar({
 
 function ActionButtons({
   status,
-  onMarcarRealizado,
-  onExcluir,
+  onEditar,
+  onMarcarRealizado
 }: {
   status: StatusAtendimento
+  onEditar: () => void
   onMarcarRealizado: () => void
-  onExcluir: () => void
 }) {
   const isRealizado = status === 'Realizado'
 
   return (
     <div className="flex items-center justify-end gap-2">
+
       <button
         title="Marcar como realizado"
         onClick={onMarcarRealizado}
         disabled={isRealizado}
-        className={`p-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
-          isRealizado
-            ? 'text-slate-500 hover:bg-slate-100'
-            : 'text-emerald-600 hover:bg-emerald-50'
-        }`}
+        className={`p-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isRealizado
+          ? 'text-slate-500 hover:bg-slate-100'
+          : 'text-emerald-600 hover:bg-emerald-50'
+          }`}
       >
         <Icon name="check_circle" className="text-lg" />
-      </button>
-      <button
-        title="Excluir atendimento"
-        onClick={onExcluir}
-        className="p-2 rounded-lg text-red-600 hover:bg-red-50 transition-colors"
-      >
-        <Icon name="delete" className="text-lg" />
       </button>
     </div>
   )
@@ -232,6 +226,7 @@ export function AtendimentosPage() {
     })
   )
   const [modalAberto, setModalAberto] = useState(false)
+  const [atendimentoSelecionadoId, setAtendimentoSelecionadoId] = useState<string | null>(null)
   const [atendimentos, setAtendimentos] = useState<AtendimentoExibicao[]>([])
   const [carregando, setCarregando] = useState(true)
   const [erro, setErro] = useState<string | null>(null)
@@ -315,6 +310,13 @@ export function AtendimentosPage() {
         onClose={() => setModalAberto(false)}
         onAtendimentoSalvo={handleAtendimentoSalvo}
       />
+      <AtendimentoModal
+        isOpen={Boolean(atendimentoSelecionadoId)}
+        atendimentoId={atendimentoSelecionadoId}
+        onClose={() => setAtendimentoSelecionadoId(null)}
+        onAtualizado={handleAtendimentoSalvo}
+        onExcluido={handleAtendimentoSalvo}
+      />
       <div className="space-y-6">
         <section className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
@@ -349,21 +351,19 @@ export function AtendimentosPage() {
             <div className="flex gap-1 bg-slate-200 p-1 rounded-lg">
               <button
                 onClick={() => setActiveView('dia')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                  activeView === 'dia'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'bg-transparent text-slate-600 hover:text-slate-900'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeView === 'dia'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'bg-transparent text-slate-600 hover:text-slate-900'
+                  }`}
               >
                 Dia
               </button>
               <button
                 onClick={() => setActiveView('semana')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
-                  activeView === 'semana'
-                    ? 'bg-white text-blue-600 shadow-sm'
-                    : 'bg-transparent text-slate-600 hover:text-slate-900'
-                }`}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeView === 'semana'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'bg-transparent text-slate-600 hover:text-slate-900'
+                  }`}
               >
                 Semana
               </button>
@@ -444,6 +444,7 @@ export function AtendimentosPage() {
                     <tr
                       key={item.id}
                       className="border-b border-slate-200 hover:bg-slate-50 transition-colors"
+                      onClick={() => setAtendimentoSelecionadoId(item.id)}
                     >
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
@@ -481,8 +482,8 @@ export function AtendimentosPage() {
                       <td className="px-6 py-4 text-right">
                         <ActionButtons
                           status={item.status}
+                          onEditar={() => setAtendimentoSelecionadoId(item.id)}
                           onMarcarRealizado={() => handleMarcarRealizado(item)}
-                          onExcluir={() => handleExcluir(item)}
                         />
                       </td>
                     </tr>
