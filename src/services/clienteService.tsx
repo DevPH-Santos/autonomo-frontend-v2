@@ -15,51 +15,85 @@ export interface Cliente {
     observacao_cliente: string;
 }
 
-/**
- * Resposta ao cadastrar um cliente
- */
 export interface CadastroResponse {
     mensagem: string;
     cliente: Cliente;
 }
 
-/**
- * Resposta ao listar clientes
- */
 export interface ListarResponse {
     total: number;
     clientes: Cliente[];
 }
 
-/**
- * Resposta ao obter um cliente
- */
 export interface ObterResponse {
     cliente: Cliente;
 }
 
-/**
- * Resposta ao atualizar um cliente
- */
 export interface AtualizarResponse {
     mensagem: string;
     ID_cliente: string;
 }
 
-/**
- * Resposta ao deletar um cliente
- */
 export interface DeletarResponse {
     mensagem: string;
 }
 
-/**
- * Cadastra um novo cliente no sistema.
- *
- * @param {Object} dados - Objeto contendo os dados do cliente
- * @returns {Promise<CadastroResponse>} Retorna mensagem e dados do cliente criado
- */
-export function cadastrarCliente(dados: {
+interface CacheClientes extends ListarResponse {
+    atualizadoEm: number;
+}
+
+const CLIENTES_CACHE_PREFIX = "clientes_cache";
+
+function obterChaveCache(): string | null {
+    if (typeof window === "undefined") return null;
+
+    const usuarioLogado = obterUsuarioLogado();
+    return `${CLIENTES_CACHE_PREFIX}_${usuarioLogado?.id || "sem_usuario"}`;
+}
+
+export function obterClientesCache(): ListarResponse | null {
+    const chave = obterChaveCache();
+    if (!chave) return null;
+
+    try {
+        const cacheJson = localStorage.getItem(chave);
+        if (!cacheJson) return null;
+
+        const cache = JSON.parse(cacheJson) as CacheClientes;
+        if (!Array.isArray(cache.clientes)) return null;
+
+        return {
+            total: cache.total ?? cache.clientes.length,
+            clientes: cache.clientes,
+        };
+    } catch (error) {
+        console.error("Erro ao ler cache de clientes:", error);
+        localStorage.removeItem(chave);
+        return null;
+    }
+}
+
+function salvarClientesCache(response: ListarResponse): void {
+    const chave = obterChaveCache();
+    if (!chave) return;
+
+    const cache: CacheClientes = {
+        total: response.total ?? response.clientes.length,
+        clientes: response.clientes,
+        atualizadoEm: Date.now(),
+    };
+
+    localStorage.setItem(chave, JSON.stringify(cache));
+}
+
+export function invalidarCacheClientes(): void {
+    const chave = obterChaveCache();
+    if (!chave) return;
+
+    localStorage.removeItem(chave);
+}
+
+export async function cadastrarCliente(dados: {
     nome_cliente: string;
     email_cliente: string;
     telefone_cliente: string;
@@ -71,50 +105,42 @@ export function cadastrarCliente(dados: {
     status_cliente: string;
     observacao_cliente: string;
 }): Promise<CadastroResponse> {
+    const usuarioLogado = obterUsuarioLogado();
 
-    const usuarioLogado = obterUsuarioLogado()
-
-    if(!usuarioLogado){
-        throw new Error("Usuário não autenticado")
+    if (!usuarioLogado) {
+        throw new Error("Usuário não autenticado");
     }
 
-    return apiFetch<CadastroResponse>("/clientes", {
+    const response = await apiFetch<CadastroResponse>("/clientes", {
         method: "POST",
-        body: JSON.stringify({...dados, fk_usuario_cliente: usuarioLogado.id}),
+        body: JSON.stringify({ ...dados, fk_usuario_cliente: usuarioLogado.id }),
     });
+
+    invalidarCacheClientes();
+    return response;
 }
 
-/**
- * Lista todos os clientes cadastrados.
- *
- * @returns {Promise<ListarResponse>} Retorna lista de clientes e total
- */
-export function listarClientes(): Promise<ListarResponse> {
-    return apiFetch<ListarResponse>("/clientes", {
+export async function listarClientes(forcarAtualizacao = false): Promise<ListarResponse> {
+    if (!forcarAtualizacao) {
+        const cache = obterClientesCache();
+        if (cache) return cache;
+    }
+
+    const response = await apiFetch<ListarResponse>("/clientes", {
         method: "GET",
     });
+
+    salvarClientesCache(response);
+    return response;
 }
 
-/**
- * Obtém um cliente específico pelo ID.
- *
- * @param {string} ID_cliente - ID do cliente
- * @returns {Promise<ObterResponse>} Retorna dados do cliente
- */
 export function obterCliente(ID_cliente: string): Promise<ObterResponse> {
     return apiFetch<ObterResponse>(`/clientes/${ID_cliente}`, {
         method: "GET",
     });
 }
 
-/**
- * Atualiza dados de um cliente.
- *
- * @param {string} ID_cliente - ID do cliente
- * @param {Partial<Cliente>} dados - Dados a atualizar (pode ser parcial)
- * @returns {Promise<AtualizarResponse>} Retorna mensagem de sucesso
- */
-export function atualizarCliente(
+export async function atualizarCliente(
     ID_cliente: string,
     dados: Partial<{
         nome_cliente: string;
@@ -129,20 +155,20 @@ export function atualizarCliente(
         observacao_cliente: string;
     }>
 ): Promise<AtualizarResponse> {
-    return apiFetch<AtualizarResponse>(`/clientes/${ID_cliente}`, {
+    const response = await apiFetch<AtualizarResponse>(`/clientes/${ID_cliente}`, {
         method: "PUT",
         body: JSON.stringify(dados),
     });
+
+    invalidarCacheClientes();
+    return response;
 }
 
-/**
- * Deleta um cliente.
- *
- * @param {string} ID_cliente - ID do cliente
- * @returns {Promise<DeletarResponse>} Retorna mensagem de sucesso
- */
-export function deletarCliente(ID_cliente: string): Promise<DeletarResponse> {
-    return apiFetch<DeletarResponse>(`/clientes/${ID_cliente}`, {
+export async function deletarCliente(ID_cliente: string): Promise<DeletarResponse> {
+    const response = await apiFetch<DeletarResponse>(`/clientes/${ID_cliente}`, {
         method: "DELETE",
     });
+
+    invalidarCacheClientes();
+    return response;
 }
