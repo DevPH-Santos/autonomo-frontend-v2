@@ -10,6 +10,9 @@ import {
   type StatusAtendimento,
 } from '@/services/atendimentoService'
 import { useState, useRef, useEffect } from 'react'
+import { obterClientesCache } from '@/services/clienteService'
+import { obterProdutosCache } from '@/services/produtoService'
+import { formatarInteiroComoMoeda } from '@/services/formatters'
 
 interface Produto {
   id: string
@@ -119,17 +122,35 @@ export function NovoAtendimentoModal({
     setClienteId('')
     setErro('')
 
-    const termoLimpo = termo.trim()
+    const cache = obterClientesCache()
+    const fonte = cache?.clientes ?? []
+
+    const termoLimpo = termo.trim().toLowerCase()
+
     if (!termoLimpo) {
-      setClientesOpcoes([])
-      setClienteAberto(false)
+      if (fonte.length > 0) {
+        setClientesOpcoes(fonte.map((c) => ({ id: c.ID_cliente, nome: c.nome_cliente })))
+      } else {
+        setClientesOpcoes([])
+      }
+      setClienteAberto(true)
+      return
+    }
+
+    const filtrados = fonte.filter((c) =>
+      c.nome_cliente.toLowerCase().includes(termoLimpo)
+    )
+
+    if (filtrados.length > 0) {
+      setClientesOpcoes(filtrados.map((c) => ({ id: c.ID_cliente, nome: c.nome_cliente })))
+      setClienteAberto(true)
       return
     }
 
     try {
       const response = await buscarClientesAtendimento(termoLimpo)
       setClientesOpcoes(response.clientes)
-      setClienteAberto(true)
+      setClienteAberto(response.clientes.length > 0)
     } catch (error) {
       console.error('Erro ao buscar clientes:', error)
       setClientesOpcoes([])
@@ -146,17 +167,35 @@ export function NovoAtendimentoModal({
   const handleBuscaProduto = async (termo: string) => {
     setBuscarProduto(termo)
 
-    const termoLimpo = termo.trim()
+    const cache = obterProdutosCache()
+    const fonte = cache?.produtos ?? []
+
+    const termoLimpo = termo.trim().toLowerCase()
+
     if (!termoLimpo) {
-      setProdutosOpcoes([])
-      setProdutoAberto(false)
+      if (fonte.length > 0) {
+        setProdutosOpcoes(fonte.map((p) => ({ id: p.ID_produto, nome: p.nome_produto, valor: p.valor_produto })))
+      } else {
+        setProdutosOpcoes([])
+      }
+      setProdutoAberto(true)
+      return
+    }
+
+    const filtrados = fonte.filter((p) =>
+      p.nome_produto.toLowerCase().includes(termoLimpo)
+    )
+
+    if (filtrados.length > 0) {
+      setProdutosOpcoes(filtrados.map((p) => ({ id: p.ID_produto, nome: p.nome_produto, valor: p.valor_produto })))
+      setProdutoAberto(true)
       return
     }
 
     try {
       const response = await buscarProdutosAtendimento(termoLimpo)
       setProdutosOpcoes(response.produtos)
-      setProdutoAberto(true)
+      setProdutoAberto(response.produtos.length > 0)
     } catch (error) {
       console.error('Erro ao buscar produtos:', error)
       setProdutosOpcoes([])
@@ -170,11 +209,11 @@ export function NovoAtendimentoModal({
         produtos.map((p) =>
           p.id === produtoEmEdicao
             ? {
-                ...p,
-                ID_produto: String(opcao.id),
-                nome: opcao.nome,
-                precoUnitario: Number(opcao.valor) || 0,
-              }
+              ...p,
+              ID_produto: String(opcao.id),
+              nome: opcao.nome,
+              precoUnitario: Number(opcao.valor) || 0,
+            }
             : p
         )
       )
@@ -306,22 +345,26 @@ export function NovoAtendimentoModal({
                     placeholder="Digite o nome do cliente"
                     value={cliente}
                     onChange={(e) => handleBuscaCliente(e.target.value)}
-                    onFocus={() => cliente.length > 0 && setClienteAberto(true)}
+                    onFocus={() => handleBuscaCliente(cliente)}
                     disabled={salvando}
                     className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 bg-slate-100 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-colors disabled:opacity-50"
                   />
-                  {clienteAberto && clientesOpcoes.length > 0 && (
+                  {clienteAberto && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-slate-200 rounded-lg shadow-lg z-20">
-                      {clientesOpcoes.map((opcao) => (
-                        <button
-                          key={opcao.id}
-                          type="button"
-                          onClick={() => selecionarCliente(opcao)}
-                          className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-slate-100 last:border-b-0 text-slate-900 transition-colors"
-                        >
-                          <p className="font-medium">{opcao.nome}</p>
-                        </button>
-                      ))}
+                      {clientesOpcoes.length > 0 ? (
+                        clientesOpcoes.map((opcao) => (
+                          <button
+                            key={opcao.id}
+                            type="button"
+                            onClick={() => selecionarCliente(opcao)}
+                            className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-slate-100 last:border-b-0 text-slate-900 transition-colors"
+                          >
+                            <p className="font-medium">{opcao.nome}</p>
+                          </button>
+                        ))
+                      ) : (
+                        <p className="px-4 py-3 text-sm text-slate-500">Nenhum cliente encontrado.</p>
+                      )}
                     </div>
                   )}
                 </div>
@@ -351,7 +394,7 @@ export function NovoAtendimentoModal({
                   <input
                     type="text"
                     value={valorServico}
-                    onChange={(e) => setValorServico(e.target.value)}
+                    onChange={(e) => setValorServico(formatarInteiroComoMoeda(e.target.value))}
                     disabled={salvando}
                     inputMode="decimal"
                     placeholder="0,00"
@@ -426,29 +469,31 @@ export function NovoAtendimentoModal({
                       onFocus={() => {
                         setProdutoEmEdicao(produto.id)
                         setBuscarProduto(produto.nome)
-                        if (produto.nome.length > 0) {
-                          handleBuscaProduto(produto.nome)
-                        }
+                        handleBuscaProduto(produto.nome)
                       }}
                       disabled={salvando}
                       placeholder="Buscar produto..."
                       className="w-full bg-white border-2 border-slate-200 rounded-lg px-3 py-2 text-sm font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50"
                     />
-                    {produtoAberto && produtoEmEdicao === produto.id && produtosOpcoes.length > 0 && (
+                    {produtoAberto && produtoEmEdicao === produto.id && (
                       <div className="absolute top-full left-0 right-0 mt-1 bg-white border-2 border-slate-200 rounded-lg shadow-lg z-20">
-                        {produtosOpcoes.map((opcao) => (
-                          <button
-                            key={opcao.id}
-                            type="button"
-                            onClick={() => selecionarProduto(opcao)}
-                            className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-slate-100 last:border-b-0 text-slate-900 transition-colors"
-                          >
-                            <p className="text-sm font-medium">{opcao.nome}</p>
-                            <p className="text-xs text-slate-500">
-                              R$ {Number(opcao.valor || 0).toFixed(2)}
-                            </p>
-                          </button>
-                        ))}
+                        {produtosOpcoes.length > 0 ? (
+                          produtosOpcoes.map((opcao) => (
+                            <button
+                              key={opcao.id}
+                              type="button"
+                              onClick={() => selecionarProduto(opcao)}
+                              className="w-full text-left px-3 py-2 hover:bg-blue-50 border-b border-slate-100 last:border-b-0 text-slate-900 transition-colors"
+                            >
+                              <p className="text-sm font-medium">{opcao.nome}</p>
+                              <p className="text-xs text-slate-500">
+                                R$ {Number(opcao.valor || 0).toFixed(2)}
+                              </p>
+                            </button>
+                          ))
+                        ) : (
+                          <p className="px-3 py-2.5 text-sm text-slate-500">Nenhum produto encontrado.</p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -538,9 +583,8 @@ export function NovoAtendimentoModal({
                   </p>
                 </div>
                 <span
-                  className={`text-lg font-bold ${
-                    lucro >= 0 ? 'text-blue-600' : 'text-red-600'
-                  }`}
+                  className={`text-lg font-bold ${lucro >= 0 ? 'text-blue-600' : 'text-red-600'
+                    }`}
                 >
                   R$ {lucro.toFixed(2)}
                 </span>
