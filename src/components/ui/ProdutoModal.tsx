@@ -3,16 +3,17 @@
 import { Icon } from '@/components/ui/icon'
 import { useState, useEffect } from 'react'
 import {
+    cadastrarProduto,
     atualizarProduto,
     deletarProduto,
-    type Produto,
 } from '@/services/produtoService'
+import type { Produto } from '@/types/produto'
 import { formatarInteiroComoMoeda, formatarValor } from '@/services/formatters'
 
 interface ProdutoModalProps {
     isOpen: boolean
     onClose: () => void
-    produto: Produto
+    produto?: Produto | null
     onAtualizado?: () => void
     onExcluido?: () => void
 }
@@ -26,6 +27,7 @@ export function ProdutoModal({
     onAtualizado,
     onExcluido,
 }: ProdutoModalProps) {
+    const isEditing = Boolean(produto)
     const [nome, setNome] = useState('')
     const [preco, setPreco] = useState('')
     const [quantidade, setQuantidade] = useState('')
@@ -36,20 +38,29 @@ export function ProdutoModal({
     const [dialog, setDialog] = useState<DialogType>(null)
 
     useEffect(() => {
-        if (isOpen && produto) {
-            setNome(produto.nome_produto)
-            setPreco(String(formatarValor(produto.valor_produto)))
-            setQuantidade(String(produto.quantidade_produto))
-            setUnidade(produto.unidade_medida)
+        if (isOpen) {
+            if (produto) {
+                setNome(produto.nome_produto)
+                setPreco(String(formatarValor(produto.valor_produto)))
+                setQuantidade(String(produto.quantidade_produto))
+                setUnidade(produto.unidade_medida)
+            } else {
+                setNome('')
+                setPreco('')
+                setQuantidade('')
+                setUnidade('kg')
+            }
             setErro('')
         }
     }, [isOpen, produto])
 
-    const temAlteracoes =
-        nome !== produto.nome_produto ||
-        preco !== String(formatarValor(produto.valor_produto)) ||
-        quantidade !== String(produto.quantidade_produto) ||
-        unidade !== produto.unidade_medida
+    const temAlteracoes = isEditing
+        ? produto &&
+          (nome !== produto.nome_produto ||
+              preco !== String(formatarValor(produto.valor_produto)) ||
+              quantidade !== String(produto.quantidade_produto) ||
+              unidade !== produto.unidade_medida)
+        : Boolean(nome || preco || quantidade)
 
     function handleTentarFechar() {
         if (temAlteracoes) {
@@ -74,12 +85,27 @@ export function ProdutoModal({
         setErro('')
 
         try {
-            await atualizarProduto(produto.ID_produto, {
-                nome_produto: nome,
-                valor_produto: preco.replace(/\D/g, '').replace(/(\d+)(\d{2})$/, '$1.$2'),
-                quantidade_produto: quantidade,
-                unidade_medida: unidade,
-            })
+            const valorNumerico = Number(
+                preco.replace(/\D/g, '').replace(/(\d+)(\d{2})$/, '$1.$2')
+            )
+            const quantidadeNumerica = Number(quantidade)
+
+            if (isEditing && produto) {
+                await atualizarProduto(produto.ID_produto, {
+                    nome_produto: nome,
+                    valor_produto: valorNumerico,
+                    quantidade_produto: quantidadeNumerica,
+                    unidade_medida: unidade,
+                })
+            } else {
+                await cadastrarProduto({
+                    nome_produto: nome,
+                    valor_produto: valorNumerico,
+                    quantidade_produto: quantidadeNumerica,
+                    unidade_medida: unidade,
+                })
+            }
+
             onAtualizado?.()
             onClose()
         } catch (err) {
@@ -95,6 +121,8 @@ export function ProdutoModal({
     }
 
     async function handleExcluir() {
+        if (!produto) return
+
         setExcluindo(true)
         setErro('')
 
@@ -127,19 +155,25 @@ export function ProdutoModal({
                     {/* Header */}
                     <div className="px-8 py-6 border-b border-slate-200 flex items-start justify-between">
                         <div>
-                            <h3 className="text-xl font-bold text-slate-900">Produto</h3>
+                            <h3 className="text-xl font-bold text-slate-900">
+                                {isEditing ? 'Editar Produto' : 'Novo Produto'}
+                            </h3>
                             <p className="text-sm text-slate-500 mt-1">
-                                Edite os campos para atualizar
+                                {isEditing
+                                    ? 'Edite os campos para atualizar'
+                                    : 'Preencha os dados do novo produto'}
                             </p>
                         </div>
                         <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setDialog('confirmDelete')}
-                                title="Excluir produto"
-                                className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                            >
-                                <Icon name="delete" />
-                            </button>
+                            {isEditing && (
+                                <button
+                                    onClick={() => setDialog('confirmDelete')}
+                                    title="Excluir produto"
+                                    className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                >
+                                    <Icon name="delete" />
+                                </button>
+                            )}
                             <button
                                 onClick={handleTentarFechar}
                                 className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 transition-colors"
@@ -166,6 +200,7 @@ export function ProdutoModal({
                                 value={nome}
                                 onChange={(e) => setNome(e.target.value)}
                                 className="w-full bg-slate-100 border-none rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:bg-white transition-all"
+                                placeholder="Ex: Cloro Granulado"
                             />
                         </div>
 
@@ -179,6 +214,7 @@ export function ProdutoModal({
                                     value={preco}
                                     onChange={(e) => setPreco(formatarInteiroComoMoeda(e.target.value))}
                                     className="w-full bg-slate-100 border-none rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:bg-white transition-all"
+                                    placeholder="R$ 0,00"
                                 />
                             </div>
 
@@ -208,34 +244,33 @@ export function ProdutoModal({
                                 value={quantidade}
                                 onChange={(e) => setQuantidade(e.target.value)}
                                 className="w-full bg-slate-100 border-none rounded-lg px-4 py-3 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/30 focus:bg-white transition-all"
+                                placeholder="Ex: 10"
                             />
                         </div>
                     </div>
 
-                    {/* Footer — só aparece se houver alterações */}
-                    {temAlteracoes && (
-                        <div className="px-8 py-6 bg-slate-50 flex justify-end gap-3 border-t border-slate-200">
-                            <button
-                                onClick={handleTentarFechar}
-                                disabled={salvando}
-                                className="px-6 py-2.5 rounded-lg text-slate-700 font-semibold hover:bg-slate-200 transition-colors disabled:opacity-50"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                onClick={handleSalvar}
-                                disabled={salvando}
-                                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold shadow-lg shadow-blue-600/20 active:scale-95 transition-all disabled:opacity-50"
-                            >
-                                {salvando ? 'Salvando...' : 'Salvar alterações'}
-                            </button>
-                        </div>
-                    )}
+                    {/* Footer */}
+                    <div className="px-8 py-6 bg-slate-50 flex justify-end gap-3 border-t border-slate-200">
+                        <button
+                            onClick={handleTentarFechar}
+                            disabled={salvando}
+                            className="px-6 py-2.5 rounded-lg text-slate-700 font-semibold hover:bg-slate-200 transition-colors disabled:opacity-50"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            onClick={handleSalvar}
+                            disabled={salvando}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-2.5 rounded-lg font-bold shadow-lg shadow-blue-600/20 active:scale-95 transition-all disabled:opacity-50"
+                        >
+                            {salvando ? 'Salvando...' : isEditing ? 'Salvar alterações' : 'Cadastrar produto'}
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Dialog: confirmar exclusão */}
-            {dialog === 'confirmDelete' && (
+            {dialog === 'confirmDelete' && produto && (
                 <div className="fixed inset-0 z-60 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
                     <div
                         className="w-full max-w-sm bg-white rounded-2xl shadow-2xl p-8 space-y-6 animate-in fade-in zoom-in-95 duration-200"

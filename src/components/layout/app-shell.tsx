@@ -280,7 +280,23 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
             {busca && (
               <div className="p-4 max-h-96 overflow-y-auto">
                 <p className="text-xs text-slate-500 mb-3">Resultados para "{busca}"</p>
-                {/* Adicionar seus componentes de resultado aqui */}
+                <div className="flex flex-col gap-1">
+                  {navigation
+                    .filter((item) =>
+                      item.label.toLowerCase().includes(busca.toLowerCase())
+                    )
+                    .map((item) => (
+                      <Link
+                        key={item.href}
+                        href={item.href}
+                        onClick={() => setBuscaModalAberto(false)}
+                        className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 text-sm font-medium text-slate-800"
+                      >
+                        <Icon name={item.icon} className="text-blue-600" />
+                        <span>{item.label}</span>
+                      </Link>
+                    ))}
+                </div>
               </div>
             )}
           </div>

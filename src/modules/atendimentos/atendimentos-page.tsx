@@ -2,7 +2,6 @@
 
 import { Icon, type IconName } from '@/components/ui/icon'
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { NovoAtendimentoModal } from '@/components/ui/NovoAtendimentoModal'
 import { AtendimentoModal } from '@/components/ui/AtendimentoModal'
 import {
   atualizarAtendimento,
@@ -173,10 +172,13 @@ function ActionButtons({
 
   return (
     <div className="flex items-center justify-end gap-2">
-
       <button
+        type="button"
         title="Marcar como realizado"
-        onClick={onMarcarRealizado}
+        onClick={(e) => {
+          e.stopPropagation()
+          onMarcarRealizado()
+        }}
         disabled={isRealizado}
         className={`p-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isRealizado
           ? 'text-slate-500 hover:bg-slate-100'
@@ -184,6 +186,17 @@ function ActionButtons({
           }`}
       >
         <Icon name="check_circle" className="text-lg" />
+      </button>
+
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation()
+          onEditar()
+        }}
+        className="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 rounded-lg font-semibold text-xs transition-colors"
+      >
+        Editar
       </button>
     </div>
   )
@@ -305,15 +318,13 @@ export function AtendimentosPage() {
 
   return (
     <>
-      <NovoAtendimentoModal
-        isOpen={modalAberto}
-        onClose={() => setModalAberto(false)}
-        onAtendimentoSalvo={handleAtendimentoSalvo}
-      />
       <AtendimentoModal
-        isOpen={Boolean(atendimentoSelecionadoId)}
+        isOpen={modalAberto || Boolean(atendimentoSelecionadoId)}
         atendimentoId={atendimentoSelecionadoId}
-        onClose={() => setAtendimentoSelecionadoId(null)}
+        onClose={() => {
+          setModalAberto(false)
+          setAtendimentoSelecionadoId(null)
+        }}
         onAtualizado={handleAtendimentoSalvo}
         onExcluido={handleAtendimentoSalvo}
       />

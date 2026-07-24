@@ -2,6 +2,7 @@
 
 import { Icon } from '@/components/ui/icon'
 import {
+  cadastrarAtendimento,
   atualizarAtendimento,
   atualizarProdutosAtendimento,
   buscarClientesAtendimento,
@@ -14,8 +15,8 @@ import {
   type StatusAtendimento,
 } from '@/services/atendimentoService'
 import { formatarInteiroComoMoeda, formatarValor } from '@/services/formatters'
-import { obterClientesCache } from '@/services/clienteService'
-import { obterProdutosCache } from '@/services/produtoService'
+import { listarClientes } from '@/services/clienteService'
+import { listarProdutos } from '@/services/produtoService'
 import { useEffect, useRef, useState } from 'react'
 
 interface ProdutoAtendimentoForm {
@@ -67,7 +68,10 @@ function formatarDataParaDatetimeLocal(valor: string) {
 }
 
 function converterDatetimeLocalParaApi(valor: string) {
-  return `${valor.replace('T', ' ')}:00`
+  if (!valor) return ''
+  const limpo = valor.replace('T', ' ')
+  if (limpo.length === 16) return `${limpo}:00`
+  return limpo
 }
 
 function criarSnapshot({
@@ -155,7 +159,7 @@ export function AtendimentoModal({
   )
   const valorServicoNumerico = converterMoedaParaNumero(valorServico) || 0
   const lucro = valorServicoNumerico - totalCustos
-  const erroVisivel = isOpen && !atendimentoId ? 'Atendimento não informado.' : erro
+  const erroVisivel = erro
   const temAlteracoes =
     Boolean(snapshotOriginal) &&
     criarSnapshot({
@@ -200,6 +204,22 @@ export function AtendimentoModal({
     }
 
     if (!atendimentoId) {
+      limparEstadosAuxiliares()
+      setCliente('')
+      setClienteId('')
+      const agora = new Date()
+      const ano = agora.getFullYear()
+      const mes = String(agora.getMonth() + 1).padStart(2, '0')
+      const dia = String(agora.getDate()).padStart(2, '0')
+      const hora = String(agora.getHours()).padStart(2, '0')
+      const min = String(agora.getMinutes()).padStart(2, '0')
+      setData(`${ano}-${mes}-${dia}T${hora}:${min}`)
+      setValorServico('')
+      setStatus('Agendado')
+      setDescricao('')
+      setProdutos([])
+      setCarregando(false)
+      setSnapshotOriginal('')
       return
     }
 
@@ -277,11 +297,10 @@ export function AtendimentoModal({
 
   const handleBuscaCliente = async (termo: string) => {
     setCliente(termo)
-    setClienteId('')
     setErro('')
 
-    const cache = obterClientesCache()
-    const fonte = cache?.clientes ?? []
+    const responseClientes = await listarClientes().catch(() => null)
+    const fonte = responseClientes?.clientes ?? []
     const termoLimpo = termo.trim().toLowerCase()
 
     if (!termoLimpo) {
@@ -320,8 +339,8 @@ export function AtendimentoModal({
   const handleBuscaProduto = async (termo: string) => {
     setBuscarProduto(termo)
 
-    const cache = obterProdutosCache()
-    const fonte = cache?.produtos ?? []
+    const responseProdutos = await listarProdutos().catch(() => null)
+    const fonte = responseProdutos?.produtos ?? []
     const termoLimpo = termo.trim().toLowerCase()
 
     if (!termoLimpo) {
@@ -442,8 +461,6 @@ export function AtendimentoModal({
   }
 
   async function handleSalvar() {
-    if (!atendimentoId) return
-
     const total = converterMoedaParaNumero(valorServico)
     const produtoSemSelecao = produtos.some(
       (produto) => produto.nome.trim() && !produto.ID_produto
@@ -452,7 +469,20 @@ export function AtendimentoModal({
       (produto) => produto.ID_produto && (!produto.quantidade || produto.quantidade <= 0)
     )
 
-    if (!clienteId) {
+    let resolvedClienteId = clienteId
+
+    if (!resolvedClienteId && cliente.trim()) {
+      const listaClientes = await listarClientes().catch(() => null)
+      const encontrado = listaClientes?.clientes?.find(
+        (c) => c.nome_cliente.trim().toLowerCase() === cliente.trim().toLowerCase()
+      )
+      if (encontrado) {
+        resolvedClienteId = encontrado.ID_cliente
+        setClienteId(resolvedClienteId)
+      }
+    }
+
+    if (!resolvedClienteId) {
       setErro('Selecione um cliente da lista para salvar o atendimento.')
       return
     }
@@ -478,21 +508,39 @@ export function AtendimentoModal({
     try {
       const produtosSelecionados = produtos.filter((produto) => produto.ID_produto)
 
-      await atualizarAtendimento(atendimentoId, {
-        data_atendimento: converterDatetimeLocalParaApi(data),
-        status_atendimento: status,
-        total_atendimento: total,
-        descri_atendimento: descricao.trim(),
-        ID_cliente: clienteId,
-      })
+      if (atendimentoId) {
+        await atualizarAtendimento(atendimentoId, {
+          data_atendimento: converterDatetimeLocalParaApi(data),
+          status_atendimento: status,
+          total_atendimento: total,
+          descri_atendimento: descricao.trim(),
+          ID_cliente: resolvedClienteId,
+          fk_cliente_atendimento: resolvedClienteId,
+        })
 
-      await atualizarProdutosAtendimento(
-        atendimentoId,
-        produtosSelecionados.map((produto) => ({
-          ID_produto: produto.ID_produto,
-          quantidade_utilizada: produto.quantidade,
-        }))
-      )
+        if (produtosSelecionados.length > 0) {
+          await atualizarProdutosAtendimento(
+            atendimentoId,
+            produtosSelecionados.map((produto) => ({
+              ID_produto: produto.ID_produto,
+              quantidade_utilizada: produto.quantidade,
+            }))
+          )
+        }
+      } else {
+        await cadastrarAtendimento({
+          data_atendimento: converterDatetimeLocalParaApi(data),
+          status_atendimento: status,
+          total_atendimento: total,
+          descri_atendimento: descricao.trim(),
+          ID_cliente: resolvedClienteId,
+          fk_cliente_atendimento: resolvedClienteId,
+          produtos: produtosSelecionados.map((produto) => ({
+            ID_produto: produto.ID_produto,
+            quantidade_utilizada: produto.quantidade,
+          })),
+        })
+      }
 
       onAtualizado?.()
       onClose()
@@ -877,7 +925,7 @@ export function AtendimentoModal({
             </div>
           )}
 
-          {temAlteracoes && !carregando && (
+          {(!atendimentoId || temAlteracoes) && !carregando && (
             <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
               <button
                 type="button"
@@ -891,14 +939,14 @@ export function AtendimentoModal({
                 type="button"
                 onClick={handleSalvar}
                 disabled={salvando || excluindo}
-                className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex items-center gap-2 px-6 py-2.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium transition-colors shadow-lg disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {salvando ? (
                   'Salvando...'
                 ) : (
                   <>
                     <Icon name="save" />
-                    Salvar alterações
+                    {atendimentoId ? 'Salvar alterações' : 'Cadastrar Atendimento'}
                   </>
                 )}
               </button>
