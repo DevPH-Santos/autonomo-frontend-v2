@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { ReactNode, useState, useEffect } from 'react';
 import { Icon, type IconName } from '../ui/icon';
 import { logout, obterUsuarioLogado, type Usuario } from "@/services/authService"
@@ -29,6 +29,7 @@ interface AppShellProps {
 
 export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
   const pathname = usePathname();
+  const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [busca, setBusca] = useState('');
   const [buscaModalAberto, setBuscaModalAberto] = useState(false);
@@ -64,9 +65,9 @@ export function AppShell({ children, onSearch }: Readonly<AppShellProps>) {
   };
 
   const handleLogout = () => {
-    logout()
-    window.location.href = "/login"
-  }
+    logout();
+    router.push("/login");
+  };
 
   const NavItem = ({ item }: { item: NavigationItem }) => {
     const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`);

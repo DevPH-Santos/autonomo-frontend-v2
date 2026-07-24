@@ -46,6 +46,18 @@ export async function apiFetch<T = unknown>(
   const data = (await response.json()) as T & { erro?: string };
 
   /**
+   * Se o status HTTP for 401 (Não Autorizado/Token Expirado),
+   * limpa a sessão salva e redireciona para a página de login.
+   */
+  if (response.status === 401) {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem("token");
+      localStorage.removeItem("usuario");
+      window.location.href = "/login";
+    }
+  }
+
+  /**
    * Se o status HTTP indicar erro, lançamos uma exceção.
    * Isso permite que as telas usem try/catch para exibir mensagens ao usuário.
    */
