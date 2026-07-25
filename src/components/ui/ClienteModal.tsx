@@ -3,6 +3,7 @@
 import { Icon } from '@/components/ui/icon'
 import { useState, useEffect } from 'react'
 import { cadastrarCliente, atualizarCliente, Cliente } from '@/services/clienteService'
+import { formatarInteiroComoMoeda } from '@/services/formatters'
 
 interface ClienteModalProps {
   isOpen: boolean
@@ -146,8 +147,7 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
   }
 
   const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { value } = e.target
-    const formatado = formatarValor(value)
+    const formatado = formatarInteiroComoMoeda(e.target.value)
     setForm((prev) => ({ ...prev, valor_visita_cliente: formatado }))
     setErros((prev) => ({ ...prev, valor_visita_cliente: false }))
   }
@@ -455,7 +455,6 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
                     value={form.valor_visita_cliente}
                     onChange={handleValorChange}
                     disabled={carregando}
-                    inputMode="decimal"
                     className={`w-full pl-12 pr-4 py-3 rounded-lg border-2 transition-colors disabled:opacity-50 ${erros.valor_visita_cliente
                       ? 'border-red-500 bg-red-50 text-red-900'
                       : 'border-slate-200 bg-slate-100 text-slate-900'
