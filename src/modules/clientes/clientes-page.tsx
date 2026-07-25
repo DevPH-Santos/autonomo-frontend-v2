@@ -151,18 +151,18 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
     handleFecharModalDelete()
   }
 
-  if (carregando) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="text-center">
-          <div className="inline-block animate-spin">
-            <Icon name="refresh" className="text-4xl text-blue-600" />
-          </div>
-          <p className="mt-4 text-slate-600 font-medium">Carregando clientes...</p>
-        </div>
-      </div>
-    )
-  }
+  // if (carregando) {
+  //   return (
+  //     <div className="flex items-center justify-center py-12">
+  //       <div className="text-center">
+  //         <div className="inline-block animate-spin">
+  //           <Icon name="refresh" className="text-4xl text-blue-600" />
+  //         </div>
+  //         <p className="mt-4 text-slate-600 font-medium">Carregando clientes...</p>
+  //       </div>
+  //     </div>
+  //   )
+  // }
 
   return (
     <>
@@ -282,153 +282,165 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
 
         {/* ===== TABELA DE CLIENTES ===== */}
         <div className="bg-white rounded-lg overflow-hidden shadow-sm border border-slate-200">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse">
-              <thead>
-                <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap">
-                    Nome do Cliente
-                  </th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap hidden sm:table-cell">
-                    Endereço
-                  </th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap hidden sm:table-cell">
-                    Bairro
-                  </th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap hidden md:table-cell">
-                    Serviço
-                  </th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap hidden lg:table-cell">
-                    Frequência
-                  </th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap">
-                    Valor
-                  </th>
-                  <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap">
-                    Ações
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {clientesPaginados.length > 0 ? (
-                  clientesPaginados.map((cliente) => (
-                    <tr
-                      key={cliente.ID_cliente}
-                      className="border-t border-slate-200 hover:bg-slate-50 transition-colors"
-                    >
-                      {/* Nome e Telefone */}
-                      <td className="px-6 py-4 align-middle">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${getAvatarColor(cliente.cor)}`}
-                          >
-                            {cliente.iniciais}
-                          </div>
-                          <div>
-                            <p className="font-semibold text-sm text-slate-900">
-                              {cliente.nome_cliente}
-                            </p>
-                            <p className="text-xs text-slate-500">
-                              {cliente.telefone_cliente}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
+          {carregando ?
+            (
+              <div className="flex items-center justify-center py-12">
+                <div className="text-center">
+                  <div className="inline-block animate-spin">
+                    <Icon name="refresh" className="text-4xl text-blue-600" />
+                  </div>
+                  <p className="mt-4 text-slate-600 font-medium">Carregando clientes...</p>
+                </div>
+              </div>
+            )
+            : clientesPaginados.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-3 p-12">
+                <Icon name="search_off" className="text-5xl text-slate-300" />
+                <p className="text-slate-500 font-medium">
+                  Nenhum cliente encontrado
+                </p>
+                <p className="text-sm text-slate-400">
+                  Tente ajustar seus filtros ou busca
+                </p>
+              </div>
+            )
+              :
+              (
 
-                      {/* Localização */}
-                      <td className="px-4 py-4 text-sm text-slate-700 hidden sm:table-cell">
-                        {cliente.endereco_cliente}
-                      </td>
-
-                      {/* Bairro */}
-                      <td className="px-4 py-4 text-sm text-slate-700 hidden sm:table-cell">
-                        {cliente.bairro_cliente}
-                      </td>
-
-                      {/* Serviço */}
-                      <td className="px-4 py-4 hidden md:table-cell">
-                        <span className="inline-block text-xs font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded">
-                          {cliente.tipo_contratacao_cliente}
-                        </span>
-                      </td>
-
-                      {/* Frequência */}
-                      <td className="px-4 py-4 text-sm text-slate-700 hidden lg:table-cell">
-                        {cliente.frequencia_cliente}
-                      </td>
-
-                      {/* Valor */}
-                      <td className="px-4 py-4 text-sm font-bold text-sky-700">
-                        R$ {formatarValor(cliente.valor_visita_cliente)}
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-4 py-4">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${cliente.status_cliente === 'Ativo'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-slate-100 text-slate-600'
-                            }`}
+                < div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="border-b border-slate-200 bg-slate-50">
+                        <th className="px-6 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap">
+                          Nome do Cliente
+                        </th>
+                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap hidden sm:table-cell">
+                          Endereço
+                        </th>
+                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap hidden sm:table-cell">
+                          Bairro
+                        </th>
+                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap hidden md:table-cell">
+                          Serviço
+                        </th>
+                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap hidden lg:table-cell">
+                          Frequência
+                        </th>
+                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap">
+                          Valor
+                        </th>
+                        <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap">
+                          Status
+                        </th>
+                        <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap">
+                          Ações
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {clientesPaginados.map((cliente) => (
+                        <tr
+                          key={cliente.ID_cliente}
+                          className="border-t border-slate-200 hover:bg-slate-50 transition-colors"
                         >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${cliente.status_cliente === 'Ativo' ? 'bg-green-500' : 'bg-slate-400'
-                              }`}
-                          />
-                          {cliente.status_cliente}
-                        </span>
-                      </td>
+                          {/* Nome e Telefone */}
+                          <td className="px-6 py-4 align-middle">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shrink-0 ${getAvatarColor(cliente.cor)}`}
+                              >
+                                {cliente.iniciais}
+                              </div>
+                              <div>
+                                <p className="font-semibold text-sm text-slate-900">
+                                  {cliente.nome_cliente}
+                                </p>
+                                <p className="text-xs text-slate-500">
+                                  {cliente.telefone_cliente}
+                                </p>
+                              </div>
+                            </div>
+                          </td>
 
-                      {/* Ações */}
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            title="Visualizar"
-                            onClick={() => {
-                              console.log('Visualizar cliente:', cliente.ID_cliente)
-                            }}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 hover:text-blue-600 transition-colors"
-                          >
-                            <Icon name="visibility" className="text-lg" />
-                          </button>
-                          <button
-                            title="Editar"
-                            onClick={() => handleEditarCliente(cliente)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 hover:text-blue-600 transition-colors"
-                          >
-                            <Icon name="edit" className="text-lg" />
-                          </button>
-                          <button
-                            title="Deletar"
-                            onClick={() => handleAbrirModalDelete(cliente)}
-                            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors"
-                          >
-                            <Icon name="delete" className="text-lg" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td colSpan={7} className="px-6 py-12 text-center">
-                      <div className="flex flex-col items-center justify-center gap-3">
-                        <Icon name="search_off" className="text-5xl text-slate-300" />
-                        <p className="text-slate-500 font-medium">
-                          Nenhum cliente encontrado
-                        </p>
-                        <p className="text-sm text-slate-400">
-                          Tente ajustar seus filtros ou busca
-                        </p>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+                          {/* Localização */}
+                          <td className="px-4 py-4 text-sm text-slate-700 hidden sm:table-cell">
+                            {cliente.endereco_cliente}
+                          </td>
+
+                          {/* Bairro */}
+                          <td className="px-4 py-4 text-sm text-slate-700 hidden sm:table-cell">
+                            {cliente.bairro_cliente}
+                          </td>
+
+                          {/* Serviço */}
+                          <td className="px-4 py-4 hidden md:table-cell">
+                            <span className="inline-block text-xs font-bold bg-slate-100 text-slate-600 px-2.5 py-1 rounded">
+                              {cliente.tipo_contratacao_cliente}
+                            </span>
+                          </td>
+
+                          {/* Frequência */}
+                          <td className="px-4 py-4 text-sm text-slate-700 hidden lg:table-cell">
+                            {cliente.frequencia_cliente}
+                          </td>
+
+                          {/* Valor */}
+                          <td className="px-4 py-4 text-sm font-bold text-sky-700">
+                            R$ {formatarValor(cliente.valor_visita_cliente)}
+                          </td>
+
+                          {/* Status */}
+                          <td className="px-4 py-4">
+                            <span
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-semibold whitespace-nowrap ${cliente.status_cliente === 'Ativo'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-slate-100 text-slate-600'
+                                }`}
+                            >
+                              <span
+                                className={`w-1.5 h-1.5 rounded-full ${cliente.status_cliente === 'Ativo' ? 'bg-green-500' : 'bg-slate-400'
+                                  }`}
+                              />
+                              {cliente.status_cliente}
+                            </span>
+                          </td>
+
+                          {/* Ações */}
+                          <td className="px-6 py-4 text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                title="Visualizar"
+                                onClick={() => {
+                                  console.log('Visualizar cliente:', cliente.ID_cliente)
+                                }}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 hover:text-blue-600 transition-colors"
+                              >
+                                <Icon name="visibility" className="text-lg" />
+                              </button>
+                              <button
+                                title="Editar"
+                                onClick={() => handleEditarCliente(cliente)}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-500 hover:text-blue-600 transition-colors"
+                              >
+                                <Icon name="edit" className="text-lg" />
+                              </button>
+                              <button
+                                title="Deletar"
+                                onClick={() => handleAbrirModalDelete(cliente)}
+                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors"
+                              >
+                                <Icon name="delete" className="text-lg" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+              )
+          }
 
           {/* ===== PAGINAÇÃO ===== */}
           {clientesFiltrados.length > 0 && (
