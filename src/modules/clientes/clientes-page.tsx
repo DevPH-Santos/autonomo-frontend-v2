@@ -7,6 +7,9 @@ import { listarClientes, deletarCliente, atualizarCliente, Cliente } from '@/ser
 import { DeletarClienteModal } from '@/components/ui/DeletarClienteModal'
 import { formatarValor } from '@/services/formatters'
 
+//modal de visuaização
+import { VisualizarClienteModal } from '@/components/ui/VisualizarClienteModal'
+
 interface ClienteExibicao extends Cliente {
   iniciais: string
   cor: 'sky' | 'slate'
@@ -18,12 +21,16 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
   const [erro, setErro] = useState<string | null>(null)
   const [modalClienteAberto, setModalClienteAberto] = useState(false)
   const [clienteEmEdicao, setClienteEmEdicao] = useState<ClienteExibicao | null>(null)
-  const [statusFiltro, setStatusFiltro] = useState('todos')
+  const [statusFiltro, setStatusFiltro] = useState('ativo')
   const [bairroFiltro, setBairroFiltro] = useState('todos')
   const [contratFiltro, setContratFiltro] = useState('todos')
   const [paginaAtual, setPaginaAtual] = useState(1)
   const [modalDeleteAberto, setModalDeleteAberto] = useState(false)
   const [clienteSelecionadoDelete, setClienteSelecionadoDelete] = useState<ClienteExibicao | null>(null)
+
+  //use states de visualização
+  const [modalVisualizarAberto, setModalVisualizarAberto] = useState(false)
+  const [clienteSelecionado, setClienteSelecionado] = useState<ClienteExibicao | null>(null)
 
   const itensPorPagina = 5
 
@@ -124,6 +131,13 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
     setModalClienteAberto(true)
   }
 
+  const handleVisualizarCliente = (cliente: ClienteExibicao) => {
+
+    setClienteSelecionado(cliente)
+    setModalVisualizarAberto(true)
+
+  }
+
   const handleFecharModal = () => {
     setClienteEmEdicao(null)
     setModalClienteAberto(false)
@@ -166,6 +180,18 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
 
   return (
     <>
+
+      {/* Modal de visualização */}
+      <VisualizarClienteModal
+        isOpen={modalVisualizarAberto}
+        onClose={() => setModalVisualizarAberto(false)}
+        onClienteAtualizado={() => {
+          carregarClientes()
+          setModalVisualizarAberto(false)
+        }}
+        cliente={clienteSelecionado}
+      />
+
       {/* ✅ Modal único para novo/edição */}
       <ClienteModal
         isOpen={modalClienteAberto}
@@ -408,7 +434,7 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
                           {/* Ações */}
                           <td className="px-6 py-4 text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <button
+                              {/* <button
                                 title="Visualizar"
                                 onClick={() => {
                                   console.log('Visualizar cliente:', cliente.ID_cliente)
@@ -430,6 +456,12 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
                                 className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-slate-500 hover:text-red-600 transition-colors"
                               >
                                 <Icon name="delete" className="text-lg" />
+                              </button> */}
+                              <button
+                                onClick={() => handleVisualizarCliente(cliente)}
+                                className="px-3 py-1.5 bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 rounded-lg font-semibold text-xs transition-colors"
+                              >
+                                Ver
                               </button>
                             </div>
                           </td>
