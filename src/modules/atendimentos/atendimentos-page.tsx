@@ -455,7 +455,6 @@ export function AtendimentosPage() {
                     <tr
                       key={item.id}
                       className="border-b border-slate-200 hover:bg-slate-50 transition-colors"
-                      onClick={() => setAtendimentoSelecionadoId(item.id)}
                     >
                       <td className="px-6 py-4">
                         <div className="flex flex-col">
