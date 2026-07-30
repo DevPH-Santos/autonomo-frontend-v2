@@ -151,6 +151,10 @@ export function AtendimentoModal({
   const [buscarProduto, setBuscarProduto] = useState('')
   const [produtosOpcoes, setProdutosOpcoes] = useState<ProdutoBuscaComUnidade[]>([])
   const [produtoAberto, setProdutoAberto] = useState(false)
+
+  //forma pagamento padrao Pagamentos
+  const [formaPgto, setFormaPgto] = useState<string>('Pix')
+
   const refProdutoAberto = useRef<HTMLDivElement>(null)
 
   const totalCustos = produtos.reduce(
@@ -216,6 +220,8 @@ export function AtendimentoModal({
       setData(`${ano}-${mes}-${dia}T${hora}:${min}`)
       setValorServico('')
       setStatus('Agendado')
+      // forma de pagamento
+      setFormaPgto('Pix')
       setDescricao('')
       setProdutos([])
       setCarregando(false)
@@ -390,12 +396,12 @@ export function AtendimentoModal({
         produtosAtuais.map((produto) =>
           produto.id === produtoEmEdicao
             ? {
-                ...produto,
-                ID_produto: String(opcao.id),
-                nome: opcao.nome,
-                precoUnitario: Number(opcao.valor) || 0,
-                unidade: opcao.unidade || produto.unidade,
-              }
+              ...produto,
+              ID_produto: String(opcao.id),
+              nome: opcao.nome,
+              precoUnitario: Number(opcao.valor) || 0,
+              unidade: opcao.unidade || produto.unidade,
+            }
             : produto
         )
       )
@@ -450,10 +456,10 @@ export function AtendimentoModal({
       produtosAtuais.map((produto) =>
         produto.id === id
           ? {
-              ...produto,
-              ID_produto: '',
-              nome: termo,
-            }
+            ...produto,
+            ID_produto: '',
+            nome: termo,
+          }
           : produto
       )
     )
@@ -535,6 +541,7 @@ export function AtendimentoModal({
           descri_atendimento: descricao.trim(),
           ID_cliente: resolvedClienteId,
           fk_cliente_atendimento: resolvedClienteId,
+          forma_pgto: formaPgto,
           produtos: produtosSelecionados.map((produto) => ({
             ID_produto: produto.ID_produto,
             quantidade_utilizada: produto.quantidade,
@@ -726,6 +733,26 @@ export function AtendimentoModal({
                       ))}
                     </select>
                   </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-900 mb-1.5">
+                      Forma de Pagamento
+                    </label>
+                    <select
+                      value={formaPgto}
+                      onChange={(e) => setFormaPgto(e.target.value)}
+                      disabled={salvando || excluindo}
+                      className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 bg-slate-100 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white transition-colors disabled:opacity-50"
+                    >
+                      <option value="Pix">Pix</option>
+                      <option value="Dinheiro">Dinheiro</option>
+                      <option value="Cartão de Crédito">Cartão de Crédito</option>
+                      <option value="Cartão de Débito">Cartão de Débito</option>
+                      <option value="Transferência">Transferência</option>
+                      <option value="Boleto">Boleto</option>
+                    </select>
+                  </div>
+
                 </div>
               </section>
 
@@ -913,9 +940,8 @@ export function AtendimentoModal({
                       <p className="text-xs text-slate-500">Valor serviço - Custos</p>
                     </div>
                     <span
-                      className={`text-lg font-bold ${
-                        lucro >= 0 ? 'text-blue-600' : 'text-red-600'
-                      }`}
+                      className={`text-lg font-bold ${lucro >= 0 ? 'text-blue-600' : 'text-red-600'
+                        }`}
                     >
                       R$ {formatarValor(lucro)}
                     </span>

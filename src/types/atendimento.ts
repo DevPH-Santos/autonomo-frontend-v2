@@ -60,6 +60,9 @@ export interface CadastroAtendimentoDados {
     ID_cliente?: string | number;
     fk_cliente_atendimento?: string | number;
     produtos?: ProdutoAtendimentoPayload[];
+    //campos que serão enviados para cadastro de um pagamento
+    forma_pgto: string;
+    obs_pgto?: string | null;
 }
 
 export interface AtualizarAtendimentoDados {

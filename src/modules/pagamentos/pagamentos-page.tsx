@@ -1,170 +1,116 @@
-/**
- * PÁGINA DE PAGAMENTOS
- * 
- * Este arquivo contém o componente principal para gerenciar e visualizar pagamentos.
- * Inclui:
- * - Dashboard com métricas de pagamentos
- * - Filtros para buscar pagamentos específicos
- * - Tabela listando todos os pagamentos
- * - Modal para editar/criar novos pagamentos
- * - Paginação para navegar entre páginas
- * 
- * @component
- * @example
- * return <PagamentosPage />
- */
-
 'use client'
 
 import { Icon } from '@/components/ui/icon'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { EditarPagamentoModal } from '@/components/ui/EditarPagamentoModal'
+import {
+  listarPagamentos,
+  deletarPagamento as deletarPagamentoService,
+  atualizarStatusPagamento,
+} from '@/services/pagamentoService'
+import type { Pagamento as PagamentoAPI } from '@/services/pagamentoService'
+
+// ==========================================
+// CONSTANTES
+// ==========================================
+
+const ITENS_POR_PAGINA = 10
 
 // ==========================================
 // TIPOS E INTERFACES
 // ==========================================
 
-/**
- * Interface que define a estrutura de um pagamento
- * 
- * @interface Pagamento
- * @property {string} id - Identificador único do pagamento
- * @property {string} iniciais - Iniciais do nome do cliente (ex: "AM" para Andréa Martins)
- * @property {string} cliente - Nome completo do cliente
- * @property {string} endereco - Endereço de entrega/localização do cliente
- * @property {string} mesRef - Mês de referência do pagamento (ex: "Março 2024")
- * @property {string} valor - Valor do pagamento em formato brasileiro (ex: "R$ 450,00")
- * @property {string} vencimento - Data de vencimento no formato DD/MM/YYYY
- * @property {'pago' | 'pendente' | 'atrasado'} status - Status atual do pagamento
- */
 interface Pagamento {
   id: string
   iniciais: string
   cliente: string
-  endereco: string
+  descricaoAtendimento: string
   mesRef: string
   valor: string
+  valorNumerico: number
   vencimento: string
   status: 'pago' | 'pendente' | 'atrasado'
+  forma: string
+  observacao: string | null
 }
 
 // ==========================================
-// DADOS MOCKADOS
+// HELPERS
 // ==========================================
 
-/**
- * Array com dados mockados de pagamentos para exibição inicial
- * 
- * Em um projeto real, esses dados viriam de uma API/banco de dados.
- * Para fins de demonstração, usamos dados estáticos aqui.
- * 
- * @type {Pagamento[]}
- */
-const PAGAMENTOS: Pagamento[] = [
-  {
-    id: '1',
-    iniciais: 'AM',
-    cliente: 'Andréa Martins',
-    endereco: 'Residencial Lagoa',
-    mesRef: 'Março 2024',
-    valor: 'R$ 450,00',
-    vencimento: '15/03/2024',
-    status: 'pago',
-  },
-  {
-    id: '2',
-    iniciais: 'RG',
-    cliente: 'Ricardo Gomes',
-    endereco: 'Condomínio Alpha',
-    mesRef: 'Março 2024',
-    valor: 'R$ 380,00',
-    vencimento: '22/03/2024',
-    status: 'pendente',
-  },
-  {
-    id: '3',
-    iniciais: 'ML',
-    cliente: 'Mariana Luz',
-    endereco: 'Casa Particular',
-    mesRef: 'Março 2024',
-    valor: 'R$ 520,00',
-    vencimento: '05/03/2024',
-    status: 'atrasado',
-  },
-  {
-    id: '4',
-    iniciais: 'JC',
-    cliente: 'Julio Cesar',
-    endereco: 'Residencial Ipês',
-    mesRef: 'Março 2024',
-    valor: 'R$ 420,00',
-    vencimento: '10/03/2024',
-    status: 'pago',
-  },
-]
+function obterIniciais(nome: string): string {
+  return nome
+    .trim()
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0].toUpperCase())
+    .join('')
+}
+
+function formatarData(dataISO: string): string {
+  return new Date(dataISO).toLocaleDateString('pt-BR')
+}
+
+function formatarMesRef(dataISO: string): string {
+  const str = new Date(dataISO).toLocaleDateString('pt-BR', {
+    month: 'long',
+    year: 'numeric',
+  })
+  return str.charAt(0).toUpperCase() + str.slice(1)
+}
+
+function formatarValor(valor: number): string {
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(valor)
+}
+
+function mapearStatus(status: string): 'pago' | 'pendente' | 'atrasado' {
+  const mapa: Record<string, 'pago' | 'pendente' | 'atrasado'> = {
+    Pago: 'pago',
+    Pendente: 'pendente',
+    Atrasado: 'atrasado',
+  }
+  return mapa[status] ?? 'pendente'
+}
+
+function mapearParaLocal(pag: PagamentoAPI): Pagamento {
+  return {
+    id: String(pag.id),
+    iniciais: obterIniciais(pag.cliente),
+    cliente: pag.cliente,
+    descricaoAtendimento: pag.atendimento.descricao,
+    mesRef: formatarMesRef(pag.data),
+    valor: formatarValor(pag.valor),
+    valorNumerico: pag.valor,
+    vencimento: formatarData(pag.data),
+    status: mapearStatus(pag.status),
+    forma: pag.forma,
+    observacao: pag.observacao,
+  }
+}
 
 // ==========================================
 // COMPONENTES AUXILIARES
 // ==========================================
 
-/**
- * Componente que exibe um badge (etiqueta) visual com o status do pagamento
- * 
- * O badge muda de cor e conteúdo dependendo do status:
- * - PAGO: verde com ícone
- * - PENDENTE: cinza com ícone
- * - ATRASADO: vermelho com ícone
- * 
- * @component
- * @param {Object} props - Propriedades do componente
- * @param {'pago' | 'pendente' | 'atrasado'} props.status - Status do pagamento a ser exibido
- * @returns {JSX.Element} Badge estilizado com status
- */
 function StatusBadge({ status }: { status: 'pago' | 'pendente' | 'atrasado' }) {
-  // Configuração visual para cada status: cores de fundo, texto e ícone
   const statusConfig = {
-    pago: {
-      bg: 'bg-emerald-100',        // fundo verde claro
-      text: 'text-emerald-700',     // texto verde escuro
-      label: 'PAGO',
-      dot: 'bg-emerald-600',        // círculo verde
-    },
-    pendente: {
-      bg: 'bg-slate-200',           // fundo cinza claro
-      text: 'text-slate-700',       // texto cinza escuro
-      label: 'PENDENTE',
-      dot: 'bg-slate-500',          // círculo cinza
-    },
-    atrasado: {
-      bg: 'bg-red-100',             // fundo vermelho claro
-      text: 'text-red-700',         // texto vermelho escuro
-      label: 'ATRASADO',
-      dot: 'bg-red-600',            // círculo vermelho
-    },
+    pago: { bg: 'bg-emerald-100', text: 'text-emerald-700', label: 'PAGO', dot: 'bg-emerald-600' },
+    pendente: { bg: 'bg-slate-200', text: 'text-slate-700', label: 'PENDENTE', dot: 'bg-slate-500' },
+    atrasado: { bg: 'bg-red-100', text: 'text-red-700', label: 'ATRASADO', dot: 'bg-red-600' },
   }
-
-  // Obtém a configuração correspondente ao status
   const config = statusConfig[status]
-
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full ${config.bg} ${config.text}`}>
-      {/* Círculo colorido como indicador visual */}
       <span className={`w-1.5 h-1.5 rounded-full ${config.dot}`} />
       {config.label}
     </span>
   )
 }
 
-/**
- * Componente que exibe um avatar circular com as iniciais do cliente
- * 
- * Usado na coluna de cliente na tabela para facilitar identificação visual
- * 
- * @component
- * @param {Object} props - Propriedades do componente
- * @param {string} props.iniciais - Iniciais do cliente (ex: "AM")
- * @returns {JSX.Element} Avatar circular com iniciais
- */
 function ClientAvatar({ iniciais }: { iniciais: string }) {
   return (
     <div className="w-10 h-10 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center font-bold text-sm shrink-0">
@@ -177,162 +123,218 @@ function ClientAvatar({ iniciais }: { iniciais: string }) {
 // COMPONENTE PRINCIPAL
 // ==========================================
 
-/**
- * Componente principal da página de pagamentos
- * 
- * Renderiza a interface completa de gerenciamento de pagamentos, incluindo:
- * 1. Dashboard com métricas (total recebido, a receber, em atraso)
- * 2. Barra de filtros para buscar pagamentos
- * 3. Tabela com lista de pagamentos
- * 4. Paginação para navegar entre páginas
- * 5. Modal para editar/criar pagamentos
- * 
- * @component
- * @returns {JSX.Element} Página completa de pagamentos
- */
 export function PagamentosPage() {
-  // ===== ESTADO DA PÁGINA =====
-  
-  /** Controla qual página está sendo exibida (default: página 1) */
+  const [pagamentos, setPagamentos] = useState<Pagamento[]>([])
+  const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
   const [paginaAtual, setPaginaAtual] = useState(1)
-  
-  /** Controla se o modal de edição está aberto ou fechado */
   const [modalAberto, setModalAberto] = useState(false)
-  
-  /** Armazena o pagamento selecionado para edição (null = criar novo) */
   const [pagamentoSelecionado, setPagamentoSelecionado] = useState<Pagamento | null>(null)
 
-  // ===== HANDLERS (Funções de ação) =====
+  // ===== FILTROS =====
+  const [filtroStatus, setFiltroStatus] = useState<'pago' | 'pendente' | 'atrasado' | ''>('')
+  const [filtroCliente, setFiltroCliente] = useState('')
+  const [filtroMes, setFiltroMes] = useState('')
 
-  /**
-   * Abre o modal de edição com um pagamento selecionado
-   * 
-   * Quando o usuário clica em editar em um pagamento existente,
-   * esta função armazena o pagamento e abre o modal
-   * 
-   * @param {Pagamento} pagamento - Pagamento a ser editado
-   */
+  // ===== DADOS DERIVADOS =====
+
+  const mesesDisponiveis = [...new Set(pagamentos.map((p) => p.mesRef))]
+  const clientesDisponiveis = [...new Set(pagamentos.map((p) => p.cliente))]
+
+  const pagamentosFiltrados = pagamentos.filter((p) => {
+    if (filtroStatus && p.status !== filtroStatus) return false
+    if (filtroCliente && p.cliente !== filtroCliente) return false
+    if (filtroMes && p.mesRef !== filtroMes) return false
+    return true
+  })
+
+  const totalPaginas = Math.max(1, Math.ceil(pagamentosFiltrados.length / ITENS_POR_PAGINA))
+  const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA
+  const pagamentosPagina = pagamentosFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA)
+
+  // Botões de página visíveis: até 5 centrados na página atual
+  const botoesVisiveis = (): number[] => {
+    const delta = 2
+    const left = Math.max(1, paginaAtual - delta)
+    const right = Math.min(totalPaginas, paginaAtual + delta)
+    const range: number[] = []
+    for (let i = left; i <= right; i++) range.push(i)
+    return range
+  }
+
+  // Reseta para página 1 sempre que um filtro mudar
+  useEffect(() => {
+    setPaginaAtual(1)
+  }, [filtroStatus, filtroCliente, filtroMes])
+
+  // ===== BUSCA DE DADOS =====
+
+  const carregarPagamentos = useCallback(async () => {
+    try {
+      setCarregando(true)
+      setErro(null)
+      const resposta = await listarPagamentos()
+      setPagamentos(resposta.pagamentos.map(mapearParaLocal))
+    } catch {
+      setErro('Não foi possível carregar os pagamentos.')
+    } finally {
+      setCarregando(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    carregarPagamentos()
+  }, [carregarPagamentos])
+
+  // ===== MÉTRICAS =====
+
+  const totalRecebido = pagamentos
+    .filter((p) => p.status === 'pago')
+    .reduce((acc, p) => acc + p.valorNumerico, 0)
+
+  const totalAReceber = pagamentos
+    .filter((p) => p.status === 'pendente')
+    .reduce((acc, p) => acc + p.valorNumerico, 0)
+
+  const totalAtrasado = pagamentos
+    .filter((p) => p.status === 'atrasado')
+    .reduce((acc, p) => acc + p.valorNumerico, 0)
+
+  // ===== HANDLERS =====
+
   const handleEditarPagamento = (pagamento: Pagamento) => {
     setPagamentoSelecionado(pagamento)
     setModalAberto(true)
   }
 
+  const handleMarcarPago = async (id: string) => {
+    try {
+      await atualizarStatusPagamento(id, 'Pago')
+      await carregarPagamentos()
+    } catch {
+      setErro('Erro ao atualizar status do pagamento.')
+    }
+  }
+
+  const handleDeletar = async (id: string) => {
+    try {
+      await deletarPagamentoService(id)
+      await carregarPagamentos()
+    } catch {
+      setErro('Erro ao deletar pagamento.')
+    }
+  }
+
+  // ===== ESTADOS DE LOADING / ERRO =====
+
+  if (carregando) {
+    return (
+      <div className="flex items-center justify-center h-64 text-slate-500">
+        <Icon name="refresh" className="animate-spin mr-2" />
+        Carregando pagamentos...
+      </div>
+    )
+  }
+
+  if (erro) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-500">
+        <Icon name="warning" className="text-red-400 text-4xl" />
+        <p className="text-sm font-medium">{erro}</p>
+        <button onClick={carregarPagamentos} className="text-xs font-bold text-blue-600 underline">
+          Tentar novamente
+        </button>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-8">
-      {/* ===== SEÇÃO 1: MÉTRICAS DO DASHBOARD ===== */}
-      {/* 
-        Exibe 3 cards principais com informações resumidas:
-        - Total recebido no período (com comparativo +12%)
-        - Total a receber este mês
-        - Total em atraso (requer atenção)
-      */}
+      {/* ===== MÉTRICAS ===== */}
       <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        
-        {/* Card 1: Total Recebido */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:bg-emerald-50/30 transition-colors">
           <div className="flex items-center justify-between mb-4">
-            {/* Ícone do card (carteira) */}
             <div className="w-12 h-12 bg-emerald-100 text-emerald-700 rounded-full flex items-center justify-center">
               <Icon name="account_balance_wallet" />
             </div>
-            {/* Badge de crescimento (+12%) */}
-            <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
-              +12%
-            </span>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-600 mb-1">Total recebido</p>
-            <h3 className="text-2xl font-black text-slate-900">R$ 12.800,00</h3>
-          </div>
+          <p className="text-sm font-semibold text-slate-600 mb-1">Total recebido</p>
+          <h3 className="text-2xl font-black text-slate-900">{formatarValor(totalRecebido)}</h3>
         </div>
 
-        {/* Card 2: Total a Receber */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:bg-blue-50/30 transition-colors">
           <div className="flex items-center justify-between mb-4">
-            {/* Ícone do card (ações pendentes) */}
             <div className="w-12 h-12 bg-sky-100 text-blue-600 rounded-full flex items-center justify-center">
               <Icon name="pending_actions" />
             </div>
-            {/* Badge de período */}
             <span className="text-xs font-bold text-blue-600 bg-sky-100/60 px-2 py-1 rounded-lg">
               Este Mês
             </span>
           </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-600 mb-1">Total a receber no mês</p>
-            <h3 className="text-2xl font-black text-slate-900">R$ 4.250,00</h3>
-          </div>
+          <p className="text-sm font-semibold text-slate-600 mb-1">Total a receber no mês</p>
+          <h3 className="text-2xl font-black text-slate-900">{formatarValor(totalAReceber)}</h3>
         </div>
 
-        {/* Card 3: Total em Atraso */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:bg-red-50/30 transition-colors">
           <div className="flex items-center justify-between mb-4">
-            {/* Ícone do card (aviso) */}
             <div className="w-12 h-12 bg-red-100 text-red-600 rounded-full flex items-center justify-center">
               <Icon name="warning" />
             </div>
-            {/* Badge de atenção */}
-            <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-lg">
-              Atenção
-            </span>
+            {totalAtrasado > 0 && (
+              <span className="text-xs font-bold text-red-600 bg-red-50 px-2 py-1 rounded-lg">
+                Atenção
+              </span>
+            )}
           </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-600 mb-1">Total em atraso</p>
-            <h3 className="text-2xl font-black text-red-600">R$ 850,00</h3>
-          </div>
+          <p className="text-sm font-semibold text-slate-600 mb-1">Total em atraso</p>
+          <h3 className={`text-2xl font-black ${totalAtrasado > 0 ? 'text-red-600' : 'text-slate-900'}`}>
+            {formatarValor(totalAtrasado)}
+          </h3>
         </div>
       </section>
 
-      {/* ===== SEÇÃO 2: BARRA DE FILTROS ===== */}
-      {/* 
-        Permite filtrar os pagamentos por:
-        - Status (pago, pendente, atrasado)
-        - Cliente
-        - Mês/período
-        
-        Também contém botão para criar novo lançamento
-      */}
+      {/* ===== FILTROS ===== */}
       <section className="bg-slate-100 p-5 rounded-2xl flex flex-wrap items-center gap-4">
-        {/* Rótulo de filtros */}
         <div className="flex items-center gap-2">
           <Icon name="filter_list" className="text-slate-600 text-lg" />
           <span className="text-sm font-semibold text-slate-600 mr-2">Filtros:</span>
         </div>
-
-        {/* Controles de filtro (dropdowns) */}
         <div className="flex flex-wrap gap-3 flex-1">
-          
-          {/* Filtro por Status */}
-          <select className="bg-white border-none rounded-lg text-xs font-semibold px-4 py-2 focus:ring-2 focus:ring-blue-500/30 text-slate-900">
+          <select
+            value={filtroStatus}
+            onChange={(e) => setFiltroStatus(e.target.value as typeof filtroStatus)}
+            className="bg-white border-none rounded-lg text-xs font-semibold px-4 py-2 focus:ring-2 focus:ring-blue-500/30 text-slate-900"
+          >
             <option value="">Status: Todos</option>
             <option value="pago">Pago</option>
             <option value="pendente">Pendente</option>
             <option value="atrasado">Atrasado</option>
           </select>
 
-          {/* Filtro por Cliente */}
-          <select className="bg-white border-none rounded-lg text-xs font-semibold px-4 py-2 focus:ring-2 focus:ring-blue-500/30 text-slate-900">
+          <select
+            value={filtroCliente}
+            onChange={(e) => setFiltroCliente(e.target.value)}
+            className="bg-white border-none rounded-lg text-xs font-semibold px-4 py-2 focus:ring-2 focus:ring-blue-500/30 text-slate-900"
+          >
             <option value="">Cliente: Todos</option>
-            <option value="1">Andréa Martins</option>
-            <option value="2">Ricardo Gomes</option>
-            <option value="3">Mariana Luz</option>
+            {clientesDisponiveis.map((nome) => (
+              <option key={nome} value={nome}>{nome}</option>
+            ))}
           </select>
 
-          {/* Filtro por Mês */}
-          <select className="bg-white border-none rounded-lg text-xs font-semibold px-4 py-2 focus:ring-2 focus:ring-blue-500/30 text-slate-900">
-            <option value="">Mês: Março/2024</option>
-            <option value="02-24">Fevereiro/2024</option>
-            <option value="01-24">Janeiro/2024</option>
+          <select
+            value={filtroMes}
+            onChange={(e) => setFiltroMes(e.target.value)}
+            className="bg-white border-none rounded-lg text-xs font-semibold px-4 py-2 focus:ring-2 focus:ring-blue-500/30 text-slate-900"
+          >
+            <option value="">Mês: Todos</option>
+            {mesesDisponiveis.map((mes) => (
+              <option key={mes} value={mes}>{mes}</option>
+            ))}
           </select>
         </div>
-
-        {/* Botão para criar novo lançamento */}
         <button
-          onClick={() => {
-            // Limpa seleção anterior e abre modal em modo "criar novo"
-            setPagamentoSelecionado(null)
-            setModalAberto(true)
-          }}
+          onClick={() => { setPagamentoSelecionado(null); setModalAberto(true) }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-xs font-bold shadow-md transition-colors flex items-center gap-2 whitespace-nowrap"
         >
           <Icon name="add" className="text-sm" />
@@ -340,169 +342,122 @@ export function PagamentosPage() {
         </button>
       </section>
 
-      {/* ===== SEÇÃO 3: TABELA DE PAGAMENTOS ===== */}
-      {/* 
-        Exibe uma tabela com todos os pagamentos do período
-        Cada linha contém informações do cliente, valores, status e ações
-        A tabela é responsiva com scroll horizontal em telas pequenas
-      */}
+      {/* ===== TABELA ===== */}
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left">
-            
-            {/* CABEÇALHO DA TABELA */}
-            <thead>
-              <tr className="bg-slate-100 border-b border-slate-200">
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                  Cliente
-                </th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                  Mês Ref.
-                </th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                  Valor
-                </th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                  Vencimento
-                </th>
-                <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                  Status
-                </th>
-                <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">
-                  Ações
-                </th>
-              </tr>
-            </thead>
-
-            {/* CORPO DA TABELA */}
-            <tbody className="divide-y divide-slate-200">
-              {/* Itera sobre todos os pagamentos e cria uma linha para cada um */}
-              {PAGAMENTOS.map((pag) => (
-                <tr key={pag.id} className="hover:bg-slate-50 transition-colors">
-                  
-                  {/* Coluna: Cliente com avatar e endereço */}
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <ClientAvatar iniciais={pag.iniciais} />
-                      <div>
-                        <p className="text-sm font-bold text-slate-900">{pag.cliente}</p>
-                        <p className="text-xs text-slate-500">{pag.endereco}</p>
-                      </div>
-                    </div>
-                  </td>
-
-                  {/* Coluna: Mês de referência */}
-                  <td className="px-6 py-4 text-sm font-medium text-slate-900">{pag.mesRef}</td>
-
-                  {/* Coluna: Valor do pagamento */}
-                  <td className="px-6 py-4 text-sm font-bold text-slate-900">{pag.valor}</td>
-
-                  {/* Coluna: Data de vencimento */}
-                  <td className="px-6 py-4 text-sm text-slate-600">{pag.vencimento}</td>
-
-                  {/* Coluna: Status com badge visual */}
-                  <td className="px-6 py-4">
-                    <StatusBadge status={pag.status} />
-                  </td>
-
-                  {/* Coluna: Ações disponíveis para o pagamento */}
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      
-                      {/* Botão "Marcar Pago" - só aparece se status é pendente */}
-                      {pag.status === 'pendente' && (
-                        <button className="text-blue-600 hover:underline text-xs font-bold px-3 py-1 rounded-lg bg-blue-50">
-                          Marcar Pago
-                        </button>
-                      )}
-
-                      {/* Botão "Cobrar Cliente" - só aparece se status é atrasado */}
-                      {pag.status === 'atrasado' && (
-                        <button className="text-red-600 hover:underline text-xs font-bold px-3 py-1 rounded-lg border border-red-200">
-                          Cobrar Cliente
-                        </button>
-                      )}
-
-                      {/* Botão: Editar pagamento */}
-                      <button
-                        onClick={() => handleEditarPagamento(pag)}
-                        className="text-slate-500 hover:text-blue-600 transition-colors"
-                        title="Editar pagamento"
-                      >
-                        <Icon name="edit" className="text-lg" />
-                      </button>
-
-                      {/* Botão: Deletar pagamento */}
-                      <button
-                        className="text-slate-500 hover:text-red-600 transition-colors"
-                        title="Deletar pagamento"
-                      >
-                        <Icon name="delete" className="text-lg" />
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {/* ===== SEÇÃO 4: PAGINAÇÃO ===== */}
-        {/* 
-          Permite navegar entre páginas da tabela
-          Mostra o total de itens e permite ir para frente/trás ou página específica
-        */}
-        <div className="px-6 py-4 flex items-center justify-between border-t border-slate-200 bg-white">
-          
-          {/* Texto informativo sobre a paginação */}
-          <p className="text-xs text-slate-600 font-medium">Exibindo 4 de 128 pagamentos</p>
-
-          {/* Controles de navegação */}
-          <div className="flex items-center gap-2">
-            
-            {/* Botão: Página anterior */}
-            <button
-              onClick={() => setPaginaAtual(Math.max(1, paginaAtual - 1))}
-              disabled={paginaAtual === 1} // Desabilita se já estamos na primeira página
-              className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            >
-              <Icon name="chevron_left" className="text-lg" />
-            </button>
-
-            {/* Botões: Números de página (1, 2, 3) */}
-            {[1, 2, 3].map((num) => (
-              <button
-                key={num}
-                onClick={() => setPaginaAtual(num)}
-                className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${
-                  paginaAtual === num
-                    ? 'bg-blue-600 text-white'  // Página ativa
-                    : 'border border-slate-200 text-slate-700 hover:bg-slate-100'  // Página inativa
-                }`}
-              >
-                {num}
-              </button>
-            ))}
-
-            {/* Botão: Próxima página */}
-            <button
-              onClick={() => setPaginaAtual(paginaAtual + 1)}
-              className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition-colors"
-            >
-              <Icon name="chevron_right" className="text-lg" />
-            </button>
+        {pagamentosFiltrados.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-2">
+            <Icon name="receipt_long" className="text-4xl" />
+            <p className="text-sm font-medium">Nenhum pagamento encontrado.</p>
           </div>
-        </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-100 border-b border-slate-200">
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Cliente</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Mês Ref.</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Valor</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Vencimento</th>
+                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Status</th>
+                  <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Ações</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200">
+                {pagamentosPagina.map((pag) => (
+                  <tr key={pag.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <div className="flex items-center gap-3">
+                        <ClientAvatar iniciais={pag.iniciais} />
+                        <div>
+                          <p className="text-sm font-bold text-slate-900">{pag.cliente}</p>
+                          <p className="text-xs text-slate-500">{pag.descricaoAtendimento}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 text-sm font-medium text-slate-900">{pag.mesRef}</td>
+                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{pag.valor}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600">{pag.vencimento}</td>
+                    <td className="px-6 py-4"><StatusBadge status={pag.status} /></td>
+                    <td className="px-6 py-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {pag.status === 'pendente' && (
+                          <button
+                            onClick={() => handleMarcarPago(pag.id)}
+                            className="text-blue-600 hover:underline text-xs font-bold px-3 py-1 rounded-lg bg-blue-50"
+                          >
+                            Marcar Pago
+                          </button>
+                        )}
+                        {pag.status === 'atrasado' && (
+                          <button className="text-red-600 hover:underline text-xs font-bold px-3 py-1 rounded-lg border border-red-200">
+                            Cobrar Cliente
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleEditarPagamento(pag)}
+                          className="text-slate-500 hover:text-blue-600 transition-colors"
+                          title="Editar pagamento"
+                        >
+                          <Icon name="edit" className="text-lg" />
+                        </button>
+                        <button
+                          onClick={() => handleDeletar(pag.id)}
+                          className="text-slate-500 hover:text-red-600 transition-colors"
+                          title="Deletar pagamento"
+                        >
+                          <Icon name="delete" className="text-lg" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* ===== PAGINAÇÃO ===== */}
+        {pagamentosFiltrados.length > 0 && (
+          <div className="px-6 py-4 flex items-center justify-between border-t border-slate-200 bg-white">
+            <p className="text-xs text-slate-600 font-medium">
+              {inicio + 1}–{Math.min(inicio + ITENS_POR_PAGINA, pagamentosFiltrados.length)} de {pagamentosFiltrados.length} pagamento{pagamentosFiltrados.length !== 1 ? 's' : ''}
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setPaginaAtual(Math.max(1, paginaAtual - 1))}
+                disabled={paginaAtual === 1}
+                className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Icon name="chevron_left" className="text-lg" />
+              </button>
+
+              {botoesVisiveis().map((num) => (
+                <button
+                  key={num}
+                  onClick={() => setPaginaAtual(num)}
+                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${
+                    paginaAtual === num
+                      ? 'bg-blue-600 text-white'
+                      : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
+                  }`}
+                >
+                  {num}
+                </button>
+              ))}
+
+              <button
+                onClick={() => setPaginaAtual(Math.min(totalPaginas, paginaAtual + 1))}
+                disabled={paginaAtual === totalPaginas}
+                className="w-8 h-8 rounded-lg border border-slate-200 flex items-center justify-center text-slate-600 hover:bg-slate-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              >
+                <Icon name="chevron_right" className="text-lg" />
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ===== MODAL DE EDIÇÃO ===== */}
-      {/* 
-        Modal que aparece quando:
-        1. Usuário clica em "Novo Lançamento" (pagamentoSelecionado = null)
-        2. Usuário clica em editar um pagamento existente (pagamentoSelecionado = pagamento)
-        
-        Usa key dinâmica para forçar remontagem do componente quando muda de modo
-      */}
+      {/* ===== MODAL ===== */}
       <EditarPagamentoModal
         key={pagamentoSelecionado?.id ?? 'novo-pagamento'}
         isOpen={modalAberto}
@@ -510,6 +465,7 @@ export function PagamentosPage() {
         onClose={() => {
           setModalAberto(false)
           setPagamentoSelecionado(null)
+          carregarPagamentos()
         }}
       />
     </div>
