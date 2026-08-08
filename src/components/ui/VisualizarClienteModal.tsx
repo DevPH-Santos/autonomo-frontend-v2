@@ -62,6 +62,7 @@ export function VisualizarClienteModal({
     const [confirmarDelecao, setConfirmarDelecao] = useState(false)
     const [deletando, setDeletando] = useState(false)
     const [erroServidor, setErroServidor] = useState<string | null>(null)
+    const [erroDependencia, setErroDependencia] = useState(false)
     const [modalEdicaoAberto, setModalEdicaoAberto] = useState(false)
 
     const [atendimentos, setAtendimentos] = useState<Atendimento[]>([])
@@ -139,15 +140,28 @@ export function VisualizarClienteModal({
         try {
             setDeletando(true)
             setErroServidor(null)
+            setErroDependencia(false)
             await deletarCliente(cliente.ID_cliente)
             setConfirmarDelecao(false)
             if (onClienteAtualizado) onClienteAtualizado()
             onClose()
         } catch (erro: any) {
-            setErroServidor(erro.message || 'Erro ao deletar cliente. Tente novamente.')
+            // Se já temos registros vinculados carregados, o erro é de dependência —
+            // mostramos o aviso específico em vez da mensagem genérica do servidor.
+            if (atendimentos.length > 0 || pagamentos.length > 0) {
+                setErroDependencia(true)
+            } else {
+                setErroServidor(erro.message || 'Erro ao deletar cliente. Tente novamente.')
+            }
         } finally {
             setDeletando(false)
         }
+    }
+
+    const fecharConfirmacao = () => {
+        setConfirmarDelecao(false)
+        setErroDependencia(false)
+        setErroServidor(null)
     }
 
     const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -483,46 +497,98 @@ export function VisualizarClienteModal({
                         {/* Confirmação de Deleção (inline) */}
                         {confirmarDelecao && (
                             <section>
-                                <div className="rounded-xl border-2 border-red-200 bg-red-50 p-5">
-                                    <div className="flex items-start gap-3">
-                                        <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-red-100 shrink-0">
-                                            <Icon name="warning" className="text-red-600" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-bold text-red-800">Excluir cliente permanentemente?</p>
-                                            <p className="text-xs text-red-600 mt-1">
-                                                Esta ação não pode ser desfeita. Todos os dados de{' '}
-                                                <strong>{cliente.nome_cliente}</strong> serão removidos.
-                                            </p>
-                                            <div className="flex items-center gap-2 mt-4">
-                                                <button
-                                                    onClick={handleDelete}
-                                                    disabled={deletando}
-                                                    className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    {deletando ? (
-                                                        <>
-                                                            <span className="animate-spin">⏳</span>
-                                                            Excluindo...
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Icon name="delete" className="text-sm" />
-                                                            Confirmar exclusão
-                                                        </>
+                                {erroDependencia ? (
+                                    /* ── Estado: erro de dependência ── */
+                                    <div className="rounded-xl border-2 border-amber-200 bg-amber-50 p-5">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-amber-100 shrink-0">
+                                                <Icon name="link" className="text-amber-600" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-bold text-amber-900">
+                                                    Não é possível excluir este cliente
+                                                </p>
+                                                <p className="text-xs text-amber-700 mt-1.5 leading-relaxed">
+                                                    <strong>{cliente.nome_cliente}</strong> possui registros vinculados que
+                                                    impedem a exclusão:
+                                                </p>
+
+                                                {/* Contadores de dependências */}
+                                                <div className="flex items-center gap-3 mt-3">
+                                                    {atendimentos.length > 0 && (
+                                                        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 border border-amber-200 text-xs font-bold text-amber-800">
+                                                            <Icon name="handyman" className="text-sm" />
+                                                            {atendimentos.length} atendimento{atendimentos.length !== 1 ? 's' : ''}
+                                                        </span>
                                                     )}
-                                                </button>
-                                                <button
-                                                    onClick={() => setConfirmarDelecao(false)}
-                                                    disabled={deletando}
-                                                    className="px-4 py-2 rounded-lg text-slate-700 text-xs font-medium hover:bg-slate-200 transition-colors disabled:opacity-50"
-                                                >
-                                                    Cancelar
-                                                </button>
+                                                    {pagamentos.length > 0 && (
+                                                        <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-100 border border-amber-200 text-xs font-bold text-amber-800">
+                                                            <Icon name="receipt" className="text-sm" />
+                                                            {pagamentos.length} pagamento{pagamentos.length !== 1 ? 's' : ''}
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <p className="text-[11px] text-amber-600 mt-3">
+                                                    Role para cima para visualizar o histórico completo.
+                                                </p>
+
+                                                {/* TODO: futuramente adicionar botão "Deletar tudo" aqui */}
+
+                                                <div className="mt-4">
+                                                    <button
+                                                        onClick={fecharConfirmacao}
+                                                        className="px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold transition-colors"
+                                                    >
+                                                        Entendido
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
+                                ) : (
+                                    /* ── Estado: confirmação padrão ── */
+                                    <div className="rounded-xl border-2 border-red-200 bg-red-50 p-5">
+                                        <div className="flex items-start gap-3">
+                                            <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-red-100 shrink-0">
+                                                <Icon name="warning" className="text-red-600" />
+                                            </div>
+                                            <div className="flex-1">
+                                                <p className="text-sm font-bold text-red-800">Excluir cliente permanentemente?</p>
+                                                <p className="text-xs text-red-600 mt-1">
+                                                    Esta ação não pode ser desfeita. Todos os dados de{' '}
+                                                    <strong>{cliente.nome_cliente}</strong> serão removidos.
+                                                </p>
+                                                <div className="flex items-center gap-2 mt-4">
+                                                    <button
+                                                        onClick={handleDelete}
+                                                        disabled={deletando}
+                                                        className="flex items-center gap-1.5 px-4 py-2 rounded-lg bg-red-600 hover:bg-red-700 text-white text-xs font-bold transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                                    >
+                                                        {deletando ? (
+                                                            <>
+                                                                <span className="animate-spin">⏳</span>
+                                                                Excluindo...
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Icon name="delete" className="text-sm" />
+                                                                Confirmar exclusão
+                                                            </>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        onClick={fecharConfirmacao}
+                                                        disabled={deletando}
+                                                        className="px-4 py-2 rounded-lg text-slate-700 text-xs font-medium hover:bg-slate-200 transition-colors disabled:opacity-50"
+                                                    >
+                                                        Cancelar
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
                             </section>
                         )}
                     </div>
@@ -530,7 +596,7 @@ export function VisualizarClienteModal({
                     {/* Footer */}
                     <div className="sticky bottom-0 flex items-center justify-between border-t border-slate-200 bg-slate-50 px-6 py-4">
                         <button
-                            onClick={() => setConfirmarDelecao(true)}
+                            onClick={() => { setErroDependencia(false); setConfirmarDelecao(true) }}
                             disabled={deletando || confirmarDelecao}
                             className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-red-600 font-bold text-sm hover:bg-red-50 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                         >
