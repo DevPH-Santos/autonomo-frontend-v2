@@ -1,9 +1,11 @@
 'use client'
 
 import { Icon } from '@/components/ui/icon'
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Cliente, deletarCliente } from '@/services/clienteService'
 import { ClienteModal } from '@/components/ui/ClienteModal'
+import { listarAtendimentos, type Atendimento } from '@/services/atendimentoService'
+import { listarPagamentos, type Pagamento } from '@/services/pagamentoService'
 
 interface VisualizarClienteModalProps {
     isOpen: boolean
@@ -11,6 +13,45 @@ interface VisualizarClienteModalProps {
     onClienteAtualizado?: () => void
     cliente: Cliente | null
 }
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const formatarData = (data: string | null | undefined): string => {
+    if (!data) return '—'
+    try {
+        return new Date(data).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+    } catch {
+        return '—'
+    }
+}
+
+const formatarValorExibicao = (valor: number | string | undefined): string => {
+    if (valor === undefined || valor === null || valor === '') return '—'
+    const num = typeof valor === 'string' ? parseFloat(valor.replace(',', '.')) : valor
+    if (isNaN(num)) return '—'
+    return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+}
+
+// "Agendado" | "Em Andamento" | "Pendente" | "Realizado"
+const badgeAtendimento = (status: Atendimento['status_atendimento']): string => {
+    switch (status) {
+        case 'Realizado':    return 'bg-green-100 text-green-700'
+        case 'Em Andamento': return 'bg-blue-100 text-blue-700'
+        case 'Agendado':     return 'bg-sky-100 text-sky-700'
+        case 'Pendente':     return 'bg-amber-100 text-amber-700'
+    }
+}
+
+// "Pago" | "Pendente" | "Atrasado"
+const badgePagamento = (status: Pagamento['status']): string => {
+    switch (status) {
+        case 'Pago':     return 'bg-green-100 text-green-700'
+        case 'Atrasado': return 'bg-red-100 text-red-700'
+        case 'Pendente': return 'bg-amber-100 text-amber-700'
+    }
+}
+
+// ─── Component ──────────────────────────────────────────────────────────────
 
 export function VisualizarClienteModal({
     isOpen,
@@ -23,6 +64,76 @@ export function VisualizarClienteModal({
     const [erroServidor, setErroServidor] = useState<string | null>(null)
     const [modalEdicaoAberto, setModalEdicaoAberto] = useState(false)
 
+    const [atendimentos, setAtendimentos] = useState<Atendimento[]>([])
+    const [pagamentos, setPagamentos] = useState<Pagamento[]>([])
+    const [carregandoHistorico, setCarregandoHistorico] = useState(false)
+    const [exibirTodosAtendimentos, setExibirTodosAtendimentos] = useState(false)
+    const [exibirTodosPagamentos, setExibirTodosPagamentos] = useState(false)
+
+    // ── Carrega histórico ───────────────────────────────────────────────────
+    const carregarHistorico = useCallback(async () => {
+        if (!cliente) return
+        setCarregandoHistorico(true)
+        try {
+            const [resA, resP] = await Promise.all([
+                listarAtendimentos(),
+                listarPagamentos(),
+            ])
+
+            // Atendimento não expõe ID_cliente na listagem — filtra por nome
+            const atendimentosCliente = (resA.atendimentos ?? [])
+                .filter((a) => a.nome_cliente === cliente.nome_cliente)
+                .sort(
+                    (a, b) =>
+                        new Date(b.data_atendimento).getTime() -
+                        new Date(a.data_atendimento).getTime()
+                )
+
+            // Pagamento referencia o atendimento pelo id — cruza com os IDs acima
+            const idsAtendimento = new Set(
+                atendimentosCliente.map((a) => String(a.ID_atendimento))
+            )
+
+            const pagamentosCliente = (resP.pagamentos ?? [])
+                .filter((p) => idsAtendimento.has(String(p.atendimento.id)))
+                .sort(
+                    (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
+                )
+
+            setAtendimentos(atendimentosCliente)
+            setPagamentos(pagamentosCliente)
+        } catch {
+            // falha silenciosa — não bloqueia exibição do modal
+        } finally {
+            setCarregandoHistorico(false)
+        }
+    }, [cliente])
+
+    useEffect(() => {
+        if (isOpen && cliente) {
+            setExibirTodosAtendimentos(false)
+            setExibirTodosPagamentos(false)
+            carregarHistorico()
+        } else {
+            setAtendimentos([])
+            setPagamentos([])
+        }
+    }, [isOpen, cliente, carregarHistorico])
+
+    // ── Derivados ───────────────────────────────────────────────────────────
+    const totalRecebido = pagamentos
+        .filter((p) => p.status === 'Pago')
+        .reduce((acc, p) => acc + (p.valor ?? 0), 0)
+
+    const atendimentosVisiveis = exibirTodosAtendimentos
+        ? atendimentos
+        : atendimentos.slice(0, 5)
+
+    const pagamentosVisiveis = exibirTodosPagamentos
+        ? pagamentos
+        : pagamentos.slice(0, 5)
+
+    // ── Handlers ────────────────────────────────────────────────────────────
     const handleDelete = async () => {
         if (!cliente) return
         try {
@@ -46,8 +157,8 @@ export function VisualizarClienteModal({
         }
     }
 
-    const formatarValorExibicao = (valor: number | string | undefined): string => {
-        if (!valor) return '—'
+    const formatarValorLocal = (valor: number | string | undefined): string => {
+        if (!valor && valor !== 0) return '—'
         const num = typeof valor === 'string' ? parseFloat(valor.replace(',', '.')) : valor
         if (isNaN(num)) return '—'
         return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -112,8 +223,8 @@ export function VisualizarClienteModal({
                                             <div className="flex items-center gap-2 mt-1 flex-wrap">
                                                 <span
                                                     className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${cliente.status_cliente === 'Ativo'
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : 'bg-slate-200 text-slate-600'
+                                                        ? 'bg-green-100 text-green-700'
+                                                        : 'bg-slate-200 text-slate-600'
                                                         }`}
                                                 >
                                                     {cliente.status_cliente}
@@ -124,7 +235,7 @@ export function VisualizarClienteModal({
                                         <div className="text-right shrink-0">
                                             <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Valor por visita</p>
                                             <p className="text-xl font-extrabold text-blue-600">
-                                                {formatarValorExibicao(cliente.valor_visita_cliente)}
+                                                {formatarValorLocal(cliente.valor_visita_cliente)}
                                             </p>
                                         </div>
                                     </div>
@@ -186,15 +297,12 @@ export function VisualizarClienteModal({
                                 <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Valor/Visita</p>
                                     <p className="text-sm font-semibold text-blue-600">
-                                        {formatarValorExibicao(cliente.valor_visita_cliente)}
+                                        {formatarValorLocal(cliente.valor_visita_cliente)}
                                     </p>
                                 </div>
                                 <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
                                     <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500 mb-1">Status</p>
-                                    <p
-                                        className={`text-sm font-semibold ${cliente.status_cliente === 'Ativo' ? 'text-green-600' : 'text-slate-500'
-                                            }`}
-                                    >
+                                    <p className={`text-sm font-semibold ${cliente.status_cliente === 'Ativo' ? 'text-green-600' : 'text-slate-500'}`}>
                                         {cliente.status_cliente || '—'}
                                     </p>
                                 </div>
@@ -211,6 +319,165 @@ export function VisualizarClienteModal({
                                     <p className="text-sm text-slate-700 whitespace-pre-wrap">{cliente.observacao_cliente}</p>
                                 </div>
                             </section>
+                        )}
+
+                        {/* ── HISTÓRICO ────────────────────────────────────────── */}
+                        {carregandoHistorico ? (
+                            <div className="flex items-center justify-center py-10 gap-3 text-slate-400">
+                                <span className="animate-spin text-lg">⏳</span>
+                                <span className="text-sm">Carregando histórico…</span>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Banner total recebido */}
+                                {pagamentos.length > 0 && (
+                                    <div className="rounded-xl bg-linear-to-r from-blue-600 to-blue-500 p-5 flex items-center justify-between shadow-md shadow-blue-200">
+                                        <div>
+                                            <p className="text-[10px] font-bold uppercase tracking-wider text-blue-100">
+                                                Total recebido
+                                            </p>
+                                            <p className="text-2xl font-black text-white mt-0.5">
+                                                {formatarValorExibicao(totalRecebido)}
+                                            </p>
+                                            <p className="text-[10px] text-blue-200 mt-1">
+                                                {pagamentos.filter((p) => p.status === 'Pago').length} pagamento(s) confirmado(s)
+                                            </p>
+                                        </div>
+                                        <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/20">
+                                            <Icon name="payments" className="text-white text-2xl" />
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Histórico de Atendimentos */}
+                                <section className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                                            Histórico de Atendimentos
+                                        </p>
+                                        <span className="text-xs text-slate-400">
+                                            {atendimentos.length} registro{atendimentos.length !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
+
+                                    {atendimentos.length === 0 ? (
+                                        <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 text-center">
+                                            <Icon name="event_busy" className="text-slate-300 text-3xl" />
+                                            <p className="text-sm text-slate-400 mt-2">Nenhum atendimento registrado.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-xl border border-slate-200 overflow-hidden">
+                                            <table className="w-full text-left">
+                                                <thead>
+                                                    <tr className="bg-slate-50 border-b border-slate-200">
+                                                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Data</th>
+                                                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500">Descrição</th>
+                                                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Total</th>
+                                                        <th className="px-4 py-3 text-[10px] font-bold uppercase tracking-wider text-slate-500 text-right">Status</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody className="divide-y divide-slate-100">
+                                                    {atendimentosVisiveis.map((a) => (
+                                                        <tr key={a.ID_atendimento} className="hover:bg-slate-50 transition-colors">
+                                                            <td className="px-4 py-3 text-sm text-slate-700 whitespace-nowrap">
+                                                                {formatarData(a.data_atendimento)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm text-slate-700 max-w-45 truncate" title={a.descri_atendimento}>
+                                                                {a.descri_atendimento || '—'}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-sm font-semibold text-slate-800 text-right whitespace-nowrap">
+                                                                {formatarValorExibicao(a.total_atendimento)}
+                                                            </td>
+                                                            <td className="px-4 py-3 text-right">
+                                                                <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgeAtendimento(a.status_atendimento)}`}>
+                                                                    {a.status_atendimento}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                            {atendimentos.length > 5 && (
+                                                <button
+                                                    onClick={() => setExibirTodosAtendimentos((v) => !v)}
+                                                    className="w-full py-2.5 text-xs font-bold text-blue-600 hover:bg-slate-50 transition-colors border-t border-slate-200 flex items-center justify-center gap-1"
+                                                >
+                                                    <Icon name={exibirTodosAtendimentos ? 'expand_less' : 'expand_more'} className="text-sm" />
+                                                    {exibirTodosAtendimentos
+                                                        ? 'Mostrar menos'
+                                                        : `Ver todos (${atendimentos.length})`}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </section>
+
+                                {/* Histórico de Pagamentos */}
+                                <section className="space-y-3">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                                            Histórico de Pagamentos
+                                        </p>
+                                        <span className="text-xs text-slate-400">
+                                            {pagamentos.length} registro{pagamentos.length !== 1 ? 's' : ''}
+                                        </span>
+                                    </div>
+
+                                    {pagamentos.length === 0 ? (
+                                        <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 text-center">
+                                            <Icon name="receipt_long" className="text-slate-300 text-3xl" />
+                                            <p className="text-sm text-slate-400 mt-2">Nenhum pagamento encontrado.</p>
+                                        </div>
+                                    ) : (
+                                        <div className="rounded-xl border border-slate-200 overflow-hidden">
+                                            <div className="divide-y divide-slate-100">
+                                                {pagamentosVisiveis.map((p) => (
+                                                    <div
+                                                        key={p.id}
+                                                        className="flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors gap-3"
+                                                    >
+                                                        <div className="flex items-center gap-3 min-w-0">
+                                                            <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-slate-100 shrink-0">
+                                                                <Icon name="receipt" className="text-slate-500 text-base" />
+                                                            </div>
+                                                            <div className="min-w-0">
+                                                                <p className="text-sm font-semibold text-slate-800">
+                                                                    {formatarData(p.data)}
+                                                                </p>
+                                                                <p className="text-xs text-slate-400 truncate">
+                                                                    {p.forma || '—'}
+                                                                    {p.atendimento?.descricao
+                                                                        ? ` · ${p.atendimento.descricao}`
+                                                                        : ''}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center gap-3 shrink-0">
+                                                            <span className={`px-2.5 py-0.5 rounded-full text-xs font-semibold ${badgePagamento(p.status)}`}>
+                                                                {p.status}
+                                                            </span>
+                                                            <p className="text-sm font-bold text-slate-800 tabular-nums">
+                                                                {formatarValorExibicao(p.valor)}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            {pagamentos.length > 5 && (
+                                                <button
+                                                    onClick={() => setExibirTodosPagamentos((v) => !v)}
+                                                    className="w-full py-2.5 text-xs font-bold text-blue-600 hover:bg-slate-50 transition-colors border-t border-slate-200 flex items-center justify-center gap-1"
+                                                >
+                                                    <Icon name={exibirTodosPagamentos ? 'expand_less' : 'expand_more'} className="text-sm" />
+                                                    {exibirTodosPagamentos
+                                                        ? 'Mostrar menos'
+                                                        : `Ver todos (${pagamentos.length})`}
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
+                                </section>
+                            </>
                         )}
 
                         {/* Confirmação de Deleção (inline) */}
