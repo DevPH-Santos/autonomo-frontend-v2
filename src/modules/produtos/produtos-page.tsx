@@ -49,7 +49,7 @@ export function ProdutosPage() {
   const custoMedio =
     totalProdutos > 0
       ? (
-        produtos.reduce((acc, p) => acc + p.valor_produto, 0) /
+        produtos.reduce((acc, p) => acc + Number(p.valor_produto || 0), 0) /
         totalProdutos
       ).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
       : 'R$ 0,00'
