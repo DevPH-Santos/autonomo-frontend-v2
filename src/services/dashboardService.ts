@@ -1,6 +1,7 @@
 import { apiFetch } from "./api";
 import { listarAtendimentos } from "./atendimentoService";
 import { listarClientes } from "./clienteService";
+import { listarPagamentos } from "./pagamentoService";
 import { formatarValor } from "./formatters";
 import type { DashboardResumo } from "@/types/dashboard";
 
@@ -11,18 +12,19 @@ export async function obterDashboardResumo(): Promise<DashboardResumo> {
             return dashboardData;
         }
 
-        // Fallback dinâmico calculando com base nas chamadas de atendimentos e clientes
-        const [resAtendimentos, resClientes] = await Promise.all([
+        // Fallback dinâmico
+        const [resAtendimentos, resClientes, resPagamentos] = await Promise.all([
             listarAtendimentos().catch(() => ({ total: 0, atendimentos: [] })),
             listarClientes().catch(() => ({ total: 0, clientes: [] })),
+            listarPagamentos().catch(() => ({ total: 0, pagamentos: [] })),
         ]);
 
         const atendimentos = resAtendimentos.atendimentos ?? [];
         const clientes = resClientes.clientes ?? [];
+        const pagamentos = resPagamentos.pagamentos ?? [];
 
         let totalReceita = 0;
         let totalPendente = 0;
-        let clientesComPendenciaCount = 0;
 
         atendimentos.forEach((atend) => {
             const valor = typeof atend.total_atendimento === "number"
@@ -31,26 +33,29 @@ export async function obterDashboardResumo(): Promise<DashboardResumo> {
 
             if (atend.status_atendimento === "Realizado") {
                 totalReceita += valor;
-            } else if (atend.status_atendimento === "Pendente") {
-                totalPendente += valor;
-                clientesComPendenciaCount++;
             }
         });
 
-        // 30% como margem de custo presumida para lucro mensal
+        // Total a receber: soma dos pagamentos pendentes e atrasados
+        pagamentos.forEach((pgto) => {
+            if (pgto.status === "Pendente" || pgto.status === "Atrasado") {
+                totalPendente += pgto.valor;
+            }
+        });
+
         const lucroCalculado = totalReceita * 0.7;
 
         const topClientes = clientes
             .sort((a, b) => {
-                const valorA = typeof a.valor_visita_cliente === "number"
-                    ? a.valor_visita_cliente
+                const valorA = typeof a.valor_visita_cliente === "number" 
+                    ? a.valor_visita_cliente 
                     : parseFloat(String(a.valor_visita_cliente || 0));
-
-                const valorB = typeof b.valor_visita_cliente === "number"
-                    ? b.valor_visita_cliente
+                
+                const valorB = typeof b.valor_visita_cliente === "number" 
+                    ? b.valor_visita_cliente 
                     : parseFloat(String(b.valor_visita_cliente || 0));
-
-                return valorB - valorA; // Decrescente (maior primeiro)
+                
+                return valorB - valorA;
             })
             .slice(0, 3)
             .map((cliente, index) => ({
@@ -58,7 +63,7 @@ export async function obterDashboardResumo(): Promise<DashboardResumo> {
                 name: cliente.nome_cliente,
                 service: cliente.tipo_contratacao_cliente || "Serviço residencial",
                 revenue: cliente.valor_visita_cliente ? formatarValor(cliente.valor_visita_cliente) : "0,00",
-            }))
+            }));
 
         const rotasDoDia = atendimentos.slice(0, 3).map((atend) => {
             const dataObj = new Date(atend.data_atendimento || Date.now());
@@ -78,7 +83,7 @@ export async function obterDashboardResumo(): Promise<DashboardResumo> {
             lucroMensal: formatarValor(lucroCalculado),
             totalParaReceber: formatarValor(totalPendente),
             totalAtendimentos: String(atendimentos.length),
-            clientesPendentes: clientesComPendenciaCount,
+            clientesPendentes: pagamentos.filter(p => p.status === "Pendente" || p.status === "Atrasado").length,
             topClientes: topClientes.length > 0 ? topClientes : [
                 { position: 1, name: "Nenhum cliente cadastrado", service: "Cadastre clientes no sistema", revenue: "0,00" }
             ],
