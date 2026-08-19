@@ -40,12 +40,25 @@ export async function obterDashboardResumo(): Promise<DashboardResumo> {
         // 30% como margem de custo presumida para lucro mensal
         const lucroCalculado = totalReceita * 0.7;
 
-        const topClientes = clientes.slice(0, 3).map((cliente, index) => ({
-            position: index + 1,
-            name: cliente.nome_cliente,
-            service: cliente.tipo_contratacao_cliente || "Serviço residencial",
-            revenue: cliente.valor_visita_cliente ? formatarValor(cliente.valor_visita_cliente) : "0,00",
-        }));
+        const topClientes = clientes
+            .sort((a, b) => {
+                const valorA = typeof a.valor_visita_cliente === "number"
+                    ? a.valor_visita_cliente
+                    : parseFloat(String(a.valor_visita_cliente || 0));
+
+                const valorB = typeof b.valor_visita_cliente === "number"
+                    ? b.valor_visita_cliente
+                    : parseFloat(String(b.valor_visita_cliente || 0));
+
+                return valorB - valorA; // Decrescente (maior primeiro)
+            })
+            .slice(0, 3)
+            .map((cliente, index) => ({
+                position: index + 1,
+                name: cliente.nome_cliente,
+                service: cliente.tipo_contratacao_cliente || "Serviço residencial",
+                revenue: cliente.valor_visita_cliente ? formatarValor(cliente.valor_visita_cliente) : "0,00",
+            }))
 
         const rotasDoDia = atendimentos.slice(0, 3).map((atend) => {
             const dataObj = new Date(atend.data_atendimento || Date.now());
