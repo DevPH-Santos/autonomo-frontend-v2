@@ -179,7 +179,13 @@ export function DespesasPage() {
       const dt = new Date(d.dataBruta)
       return dt.getMonth() === mesAtual && dt.getFullYear() === anoAtual
     })
-    .reduce((acc, d) => acc + d.valorNumerico, 0)
+    .reduce((acc, d) => {
+      console.log("Despesa:", d)
+      console.log("valorNumerico:", d.valorNumerico)
+      console.log("Number:", Number(d.valorNumerico))
+
+      return acc + Number(d.valorNumerico)
+    }, 0)
 
   const mesAnterior = mesAtual === 0 ? 11 : mesAtual - 1
   const anoAnterior = mesAtual === 0 ? anoAtual - 1 : anoAtual
@@ -198,7 +204,7 @@ export function DespesasPage() {
 
   const totalPorCategoria = despesas.reduce(
     (acc, d) => {
-      acc[d.categoria] = (acc[d.categoria] || 0) + d.valorNumerico
+      acc[d.categoria] = (acc[d.categoria] || 0) + Number(d.valorNumerico)
       return acc
     },
     {} as Record<string, number>,
@@ -280,8 +286,8 @@ export function DespesasPage() {
           <div className="flex items-center justify-between mb-4">
             <div
               className={`w-12 h-12 rounded-full flex items-center justify-center ${variacao !== null && variacao < 0
-                  ? 'bg-green-100 text-green-600'
-                  : 'bg-amber-100 text-amber-600'
+                ? 'bg-green-100 text-green-600'
+                : 'bg-amber-100 text-amber-600'
                 }`}
             >
               <Icon name={variacao !== null && variacao < 0 ? 'trending_down' : 'trending_up'} />
@@ -293,10 +299,10 @@ export function DespesasPage() {
           <p className="text-sm font-semibold text-slate-600 mb-1">Comparação</p>
           <h3
             className={`text-2xl font-black ${variacao === null
-                ? 'text-slate-900'
-                : variacao < 0
-                  ? 'text-green-600'
-                  : 'text-amber-600'
+              ? 'text-slate-900'
+              : variacao < 0
+                ? 'text-green-600'
+                : 'text-amber-600'
               }`}
           >
             {variacao === null
@@ -442,8 +448,8 @@ export function DespesasPage() {
                   key={num}
                   onClick={() => setPaginaAtual(num)}
                   className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${paginaAtual === num
-                      ? 'bg-blue-600 text-white'
-                      : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
                     }`}
                 >
                   {num}
