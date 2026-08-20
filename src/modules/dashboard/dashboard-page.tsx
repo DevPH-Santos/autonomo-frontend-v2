@@ -11,13 +11,13 @@ import {
 
 import { ReactNode, useState, useEffect } from "react";
 import { obterDashboardResumo } from "@/services/dashboardService";
-import type { DashboardResumo, DashboardKPICard } from "@/types/dashboard";
+import type { DashboardResumo } from "@/types/dashboard";
 import { SkeletonCard, Skeleton } from "@/components/ui/skeleton";
 
 export function DashboardPage(): ReactNode {
-  const [periodSelected, setPeriodSelected] = useState<"monthly" | "yearly">(
-    "monthly"
-  );
+  const [periodSelected, setPeriodSelected] = useState<"dia" | "mes" | "ano">("mes");
+  const [monthSelected, setMonthSelected] = useState(new Date().getMonth());
+  const [yearSelected, setYearSelected] = useState(new Date().getFullYear());
   const [resumo, setResumo] = useState<DashboardResumo | null>(null);
   const [carregando, setCarregando] = useState(true);
 
@@ -25,7 +25,11 @@ export function DashboardPage(): ReactNode {
     async function carregar() {
       try {
         setCarregando(true);
-        const dados = await obterDashboardResumo();
+        const dados = await obterDashboardResumo(
+          periodSelected,
+          periodSelected === "dia" ? monthSelected : undefined,
+          periodSelected === "dia" || periodSelected === "mes" ? yearSelected : undefined
+        );
         setResumo(dados);
       } catch (err) {
         console.error("Erro ao carregar dashboard:", err);
@@ -34,36 +38,45 @@ export function DashboardPage(): ReactNode {
       }
     }
     carregar();
-  }, []);
+  }, [periodSelected, monthSelected, yearSelected]);
 
-  const kpiCards: DashboardKPICard[] = [
+  const getGraficoData = () => {
+    switch (periodSelected) {
+      case "dia":
+        return resumo?.dadosDia;
+      case "mes":
+        return resumo?.dadosMes;
+      case "ano":
+        return resumo?.dadosAno;
+      default:
+        return [];
+    }
+  };
+
+  const kpiCards = [
     {
-      icon: "payments",
+      icon: "payments" as const,
       label: "RECEITA MENSAL",
       value: resumo ? `R$ ${resumo.receitaMensal}` : "R$ 0,00",
-      trend: { icon: "trending_up", percentage: 5 },
+      trend: { icon: "trending_up" as const, percentage: 5 },
     },
     {
-      icon: "account_balance_wallet",
+      icon: "account_balance_wallet" as const,
       label: "LUCRO MENSAL",
       value: resumo ? `R$ ${resumo.lucroMensal}` : "R$ 0,00",
-      trend: { icon: "trending_flat", percentage: 0 },
+      trend: { icon: "trending_flat" as const, percentage: 0 },
     },
     {
-      icon: "pending_actions",
+      icon: "pending_actions" as const,
       label: "TOTAL PARA RECEBER",
       value: resumo ? `R$ ${resumo.totalParaReceber}` : "R$ 0,00",
     },
     {
-      icon: "event",
+      icon: "event" as const,
       label: "TOTAL DE ATENDIMENTOS",
       value: resumo ? resumo.totalAtendimentos : "0",
     },
   ];
-
-  const handlePeriodChange = (period: "monthly" | "yearly") => {
-    setPeriodSelected(period);
-  };
 
   return (
     <>
@@ -74,9 +87,9 @@ export function DashboardPage(): ReactNode {
         alert={
           resumo && resumo.clientesPendentes > 0
             ? {
-                icon: "error",
-                message: `${resumo.clientesPendentes} cliente(s) com pagamento pendente`,
-              }
+              icon: "error",
+              message: `${resumo.clientesPendentes} cliente(s) com pagamento pendente`,
+            }
             : undefined
         }
       />
@@ -85,11 +98,11 @@ export function DashboardPage(): ReactNode {
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
         {carregando
           ? Array.from({ length: 4 }).map((_, index) => (
-              <SkeletonCard key={index} />
-            ))
+            <SkeletonCard key={index} />
+          ))
           : kpiCards.map((card, index) => (
-              <KPICard key={index} {...card} />
-            ))}
+            <KPICard key={index} {...card} />
+          ))}
       </div>
 
       {/* ====== SEÇÃO DE ESTATÍSTICAS (Gráfico + Ranking) ====== */}
@@ -97,16 +110,28 @@ export function DashboardPage(): ReactNode {
         <div className="lg:col-span-2 p-8 bg-white rounded-xl shadow-sm min-h-105 flex flex-col">
           <ChartHeader
             title="Desempenho da receita"
-            subtitle="Resumo mensal dos atendimentos"
+            subtitle={
+              periodSelected === "dia"
+                ? "Resumo diário do mês"
+                : periodSelected === "mes"
+                  ? "Resumo mensal do ano"
+                  : "Resumo anual desde o início"
+            }
             activePeriod={periodSelected}
-            onPeriodChange={handlePeriodChange}
+            onPeriodChange={(period) => setPeriodSelected(period as "dia" | "mes" | "ano")}
+            monthSelected={monthSelected}
+            onMonthChange={setMonthSelected}
+            yearSelected={yearSelected}
+            onYearChange={setYearSelected}
+            showMonthFilter={periodSelected === "dia"}
+            showYearFilter={periodSelected === "dia" || periodSelected === "mes"}
           />
 
           <div className="flex-1 min-h-0">
             {carregando ? (
               <Skeleton className="w-full h-[300px]" />
             ) : (
-              <Grafico height={300} />
+              <Grafico data={getGraficoData()} height={300} />
             )}
           </div>
         </div>

@@ -24,6 +24,11 @@ export interface RouteItem {
     address: string;
 }
 
+export interface GraficoData {
+    name: string;
+    receita: number;
+}
+
 export interface DashboardResumo {
     receitaMensal: string;
     lucroMensal: string;
@@ -32,4 +37,7 @@ export interface DashboardResumo {
     clientesPendentes: number;
     topClientes: ClientRank[];
     rotasDoDia: RouteItem[];
+    dadosDia: GraficoData[];
+    dadosMes: GraficoData[];
+    dadosAno: GraficoData[];
 }

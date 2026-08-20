@@ -207,44 +207,113 @@ export function SectionHeader({
 interface ChartHeaderProps {
     title: string;
     subtitle: string;
-    activePeriod?: "monthly" | "yearly"; // ✅ Nova prop
-    onPeriodChange?: (period: "monthly" | "yearly") => void;
+    activePeriod: "dia" | "mes" | "ano";
+    onPeriodChange: (period: "dia" | "mes" | "ano") => void;
+    monthSelected?: number;
+    onMonthChange?: (month: number) => void;
+    yearSelected?: number;
+    onYearChange?: (year: number) => void;
+    showMonthFilter?: boolean;
+    showYearFilter?: boolean;
 }
 
 export function ChartHeader({
     title,
     subtitle,
-    activePeriod = "monthly",
+    activePeriod,
     onPeriodChange,
+    monthSelected = 0,
+    onMonthChange,
+    yearSelected = new Date().getFullYear(),
+    onYearChange,
+    showMonthFilter = false,
+    showYearFilter = false,
 }: ChartHeaderProps): ReactNode {
+    const MESES = [
+        "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+        "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+    ];
+
+    const getYearsRange = () => {
+        const anoAtual = new Date().getFullYear();
+        const anos = [];
+        for (let ano = 2020; ano <= anoAtual; ano++) {
+            anos.push(ano);
+        }
+        return anos;
+    };
+
     return (
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-6 mb-8">
             <div>
                 <h4 className="text-gray-950 font-bold text-xl">{title}</h4>
                 <p className="text-gray-600 text-sm">{subtitle}</p>
             </div>
-            <div className="flex gap-2">
-                {/* ✅ Mensal */}
-                <button
-                    onClick={() => onPeriodChange?.("monthly")}
-                    className={`px-4 py-2 text-xs font-semibold rounded transition-colors cursor-pointer ${activePeriod === "monthly"
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
-                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                        }`}
-                >
-                    Mensalmente
-                </button>
 
-                {/* ✅ Anual */}
-                <button
-                    onClick={() => onPeriodChange?.("yearly")}
-                    className={`px-4 py-2 text-xs font-semibold rounded transition-colors cursor-pointer ${activePeriod === "yearly"
-                            ? "bg-blue-600 text-white hover:bg-blue-700"
-                            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            <div className="flex items-center gap-3 flex-wrap">
+                {/* Botões de período */}
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => onPeriodChange("dia")}
+                        className={`px-4 py-2 text-xs font-semibold rounded transition-colors cursor-pointer ${
+                            activePeriod === "dia"
+                                ? "bg-blue-600 text-white hover:bg-blue-700"
+                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
                         }`}
-                >
-                    Anualmente
-                </button>
+                    >
+                        Por dia
+                    </button>
+                    <button
+                        onClick={() => onPeriodChange("mes")}
+                        className={`px-4 py-2 text-xs font-semibold rounded transition-colors cursor-pointer ${
+                            activePeriod === "mes"
+                                ? "bg-blue-600 text-white hover:bg-blue-700"
+                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                    >
+                        Mensalmente
+                    </button>
+                    <button
+                        onClick={() => onPeriodChange("ano")}
+                        className={`px-4 py-2 text-xs font-semibold rounded transition-colors cursor-pointer ${
+                            activePeriod === "ano"
+                                ? "bg-blue-600 text-white hover:bg-blue-700"
+                                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                        }`}
+                    >
+                        Anualmente
+                    </button>
+                </div>
+
+                {/* Dropdown Mês */}
+                {showMonthFilter && onMonthChange && (
+                    <select
+                        value={monthSelected}
+                        onChange={(e) => onMonthChange(parseInt(e.target.value))}
+                        className="px-3 py-2 rounded border border-gray-300 text-gray-700 font-medium bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        {MESES.map((mes, idx) => (
+                            <option key={idx} value={idx}>
+                                {mes}
+                            </option>
+                        ))}
+                    </select>
+                )}
+
+                {/* Dropdown Ano */}
+                {showYearFilter && onYearChange && (
+                    <select
+                        value={yearSelected}
+                        onChange={(e) => onYearChange(parseInt(e.target.value))}
+                        className="px-3 py-2 rounded border border-gray-300 text-gray-700 font-medium bg-white hover:border-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    >
+                        {getYearsRange().map((year) => (
+                            <option key={year} value={year}>
+                                {year}
+                            </option>
+                        ))}
+                    </select>
+                )}
             </div>
         </div>
     );
