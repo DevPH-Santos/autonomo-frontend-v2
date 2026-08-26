@@ -1,6 +1,7 @@
 import { apiFetch } from "./api";
 import { listarAtendimentos } from "./atendimentoService";
 import { listarClientes } from "./clienteService";
+import { listarDespesas } from "./despesaService";
 import { listarPagamentos } from "./pagamentoService";
 import { formatarValor } from "./formatters";
 import type { DashboardResumo, GraficoData } from "@/types/dashboard";
@@ -98,14 +99,16 @@ export async function obterDashboardResumo(
     try {
         const dashboardData = await apiFetch<DashboardResumo>("/dashboard").catch(() => null);
 
-        const [resAtendimentos, resClientes, resPagamentos] = await Promise.all([
+        const [resAtendimentos, resClientes, resDespesas, resPagamentos] = await Promise.all([
             listarAtendimentos().catch(() => ({ total: 0, atendimentos: [] })),
             listarClientes().catch(() => ({ total: 0, clientes: [] })),
+            listarDespesas().catch(() => ({ despesas: [] })),
             listarPagamentos().catch(() => ({ total: 0, pagamentos: [] })),
         ]);
 
         const atendimentos = resAtendimentos.atendimentos ?? [];
         const clientes = resClientes.clientes ?? [];
+        const despesas = resDespesas.despesas ?? [];
         const pagamentos = resPagamentos.pagamentos ?? [];
 
         const anoAtual = year || new Date().getFullYear();
@@ -125,7 +128,14 @@ export async function obterDashboardResumo(
             }
         });
 
-        const lucroCalculado = totalReceita * 0.7;
+        const totalDespesasDoMes = despesas
+            .filter((despesa) => {
+                const data = new Date(despesa.data);
+                return data.getFullYear() === anoAtual && data.getMonth() === mesAtual;
+            })
+            .reduce((total, despesa) => total + Number(despesa.valor), 0);
+
+        const lucroCalculado = totalReceita - totalDespesasDoMes;
 
         // Gera dados dos gráficos
         const dadosDia = gerarDadosPorDia(pagamentos, anoAtual, mesAtual);
