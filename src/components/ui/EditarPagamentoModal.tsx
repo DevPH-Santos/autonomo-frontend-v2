@@ -1,7 +1,8 @@
 'use client'
 
 import { Icon } from '@/components/ui/icon'
-import { useState } from 'react'
+import { atualizarPagamento } from '@/services/pagamentoService'
+import { useEffect, useState } from 'react'
 
 interface Pagamento {
     id: string
@@ -9,6 +10,8 @@ interface Pagamento {
     mesRef: string
     valor: string
     vencimento: string
+    forma: string
+    observacao: string | null
     status: 'pago' | 'pendente' | 'atrasado'
 }
 
@@ -18,9 +21,25 @@ interface EditarPagamentoModalProps {
     pagamento: Pagamento | null
 }
 
+const meses = [
+    'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+    'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+]
+
 function formatarDataParaInput(data: string) {
     const [dia, mes, ano] = data.split('/')
     return `${ano}-${mes}-${dia}`
+}
+
+function alterarMesDoVencimento(vencimento: string, mes: string) {
+    if (!vencimento) return vencimento
+
+    const [ano, , dia] = vencimento.split('-').map(Number)
+    const indiceMes = meses.findIndex((item) => item.toLowerCase() === mes)
+    if (!ano || !dia || indiceMes === -1) return vencimento
+
+    const ultimoDiaDoMes = new Date(ano, indiceMes + 1, 0).getDate()
+    return `${ano}-${String(indiceMes + 1).padStart(2, '0')}-${String(Math.min(dia, ultimoDiaDoMes)).padStart(2, '0')}`
 }
 
 function criarCamposIniciais(pagamento: Pagamento | null) {
@@ -41,9 +60,9 @@ function criarCamposIniciais(pagamento: Pagamento | null) {
         mes: pagamento.mesRef.split(' ')[0].toLowerCase(),
         valor: pagamento.valor.replace('R$ ', ''),
         vencimento: formatarDataParaInput(pagamento.vencimento),
-        forma: 'pix',
+        forma: pagamento.forma || 'pix',
         status: pagamento.status,
-        observacoes: '',
+        observacoes: pagamento.observacao || '',
     }
 }
 
@@ -56,18 +75,45 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
     const [forma, setForma] = useState(camposIniciais.forma)
     const [status, setStatus] = useState(camposIniciais.status)
     const [observacoes, setObservacoes] = useState(camposIniciais.observacoes)
+    const [erro, setErro] = useState<string | null>(null)
+    const [salvando, setSalvando] = useState(false)
 
-    const handleSalvar = () => {
-        console.log({
-            cliente,
-            mes,
-            valor,
-            vencimento,
-            forma,
-            status,
-            observacoes,
-        })
-        onClose()
+    useEffect(() => {
+        const campos = criarCamposIniciais(pagamento)
+        setMes(campos.mes)
+        setValor(campos.valor)
+        setVencimento(campos.vencimento)
+        setForma(campos.forma)
+        setStatus(campos.status)
+        setObservacoes(campos.observacoes)
+        setErro(null)
+    }, [pagamento, isOpen])
+
+    const handleSalvar = async () => {
+        if (!pagamento) return
+
+        const valorNumerico = Number(valor.replace(/\./g, '').replace(',', '.'))
+        if (!Number.isFinite(valorNumerico) || valorNumerico < 0) {
+            setErro('Informe um valor de pagamento válido.')
+            return
+        }
+
+        try {
+            setSalvando(true)
+            setErro(null)
+            await atualizarPagamento(pagamento.id, {
+                valor_pgto: valorNumerico,
+                data_pgto: vencimento,
+                status_pgto: status.charAt(0).toUpperCase() + status.slice(1) as 'Pago' | 'Pendente' | 'Atrasado',
+                forma_pgto: forma,
+                obs_pgto: observacoes || null,
+            })
+            onClose()
+        } catch {
+            setErro('Não foi possível salvar as alterações. Tente novamente.')
+        } finally {
+            setSalvando(false)
+        }
     }
 
     const handleCancel = () => {
@@ -75,21 +121,6 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
     }
 
     if (!isOpen) return null
-
-    const meses = [
-        'Janeiro',
-        'Fevereiro',
-        'Março',
-        'Abril',
-        'Maio',
-        'Junho',
-        'Julho',
-        'Agosto',
-        'Setembro',
-        'Outubro',
-        'Novembro',
-        'Dezembro',
-    ]
 
     return (
         <div
@@ -146,7 +177,11 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
                             <div className="relative">
                                 <select
                                     value={mes}
-                                    onChange={(e) => setMes(e.target.value)}
+                                    onChange={(e) => {
+                                        const novoMes = e.target.value
+                                        setMes(novoMes)
+                                        setVencimento(alterarMesDoVencimento(vencimento, novoMes))
+                                    }}
                                     className="w-full bg-slate-100 border-none rounded-full px-5 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 appearance-none"
                                 >
                                     {meses.map((m) => (
@@ -298,21 +333,29 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
                             className="w-full bg-slate-100 border-none rounded-xl px-5 py-3 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/30 resize-none"
                         />
                     </div>
+
+                    {erro && (
+                        <p className="text-sm font-medium text-red-600" role="alert">
+                            {erro}
+                        </p>
+                    )}
                 </form>
 
                 {/* Footer */}
                 <div className="px-8 py-6 bg-slate-100 flex items-center justify-end gap-4 border-t border-slate-200">
                     <button
                         onClick={handleCancel}
+                        disabled={salvando}
                         className="px-6 py-3 rounded-full font-semibold text-blue-600 hover:bg-slate-200 transition-colors"
                     >
                         Cancelar
                     </button>
                     <button
                         onClick={handleSalvar}
+                        disabled={salvando}
                         className="px-10 py-3 rounded-full font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-600/20 active:scale-95 transition-all"
                     >
-                        Salvar Alterações
+                        {salvando ? 'Salvando...' : 'Salvar Alterações'}
                     </button>
                 </div>
             </div>

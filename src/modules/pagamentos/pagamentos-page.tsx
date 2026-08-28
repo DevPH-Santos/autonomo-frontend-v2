@@ -49,13 +49,14 @@ function obterIniciais(nome: string): string {
 }
 
 function formatarData(dataISO: string): string {
-  return new Date(dataISO).toLocaleDateString('pt-BR')
+  return new Date(dataISO).toLocaleDateString('pt-BR', { timeZone: 'UTC' })
 }
 
 function formatarMesRef(dataISO: string): string {
   const str = new Date(dataISO).toLocaleDateString('pt-BR', {
     month: 'long',
     year: 'numeric',
+    timeZone: 'UTC',
   })
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
