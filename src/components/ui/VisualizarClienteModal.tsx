@@ -126,6 +126,12 @@ export function VisualizarClienteModal({
         .filter((p) => p.status === 'Pago')
         .reduce((acc, p) => acc + (p.valor ?? 0), 0)
 
+    const temPagamentoAtrasado = pagamentos.some((p) => p.status === 'Atrasado')
+
+    const totalAtrasado = pagamentos
+        .filter((p) => p.status === 'Atrasado')
+        .reduce((acc, p) => acc + (p.valor ?? 0), 0)
+
     const atendimentosVisiveis = exibirTodosAtendimentos
         ? atendimentos
         : atendimentos.slice(0, 5)
@@ -133,6 +139,19 @@ export function VisualizarClienteModal({
     const pagamentosVisiveis = exibirTodosPagamentos
         ? pagamentos
         : pagamentos.slice(0, 5)
+
+    // ── Helper para gerar link WhatsApp ─────────────────────────────────────
+    const gerarLinkWhatsApp = (): string => {
+        if (!cliente?.telefone_cliente) return ''
+        // Remove caracteres especiais do telefone
+        const telefone = cliente.telefone_cliente.replace(/\D/g, '')
+        // Se não começar com 55, adiciona código do Brasil
+        const numeroFormatado = telefone.startsWith('55') ? telefone : `55${telefone}`
+        const mensagem = encodeURIComponent(
+            `Olá *${cliente.nome_cliente}*! 👋\n\nVi que há pagamento(s) em atraso na sua conta. Podemos conversar sobre isso?\n\nTotal atrasado: ${formatarValorExibicao(totalAtrasado)}`
+        )
+        return `https://wa.me/${numeroFormatado}?text=${mensagem}`
+    }
 
     // ── Handlers ────────────────────────────────────────────────────────────
     const handleDelete = async () => {
@@ -360,6 +379,34 @@ export function VisualizarClienteModal({
                                         <div className="flex items-center justify-center w-12 h-12 rounded-xl bg-white/20">
                                             <Icon name="payments" className="text-white text-2xl" />
                                         </div>
+                                    </div>
+                                )}
+
+                                {/* Alerta de Pagamento Atrasado com Link WhatsApp */}
+                                {temPagamentoAtrasado && cliente.telefone_cliente && (
+                                    <div className="rounded-xl bg-gradient-to-r from-red-600 to-rose-600 p-5 flex items-center justify-between shadow-md shadow-red-200 border border-red-400/30 animate-in fade-in slide-in-from-top-2 duration-300">
+                                        <div className="flex items-center gap-3 flex-1">
+                                            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/20 shrink-0">
+                                                <Icon name="warning" className="text-white text-lg" />
+                                            </div>
+                                            <div className="min-w-0">
+                                                <p className="text-xs font-bold uppercase tracking-wider text-red-100">
+                                                    Pagamento atrasado
+                                                </p>
+                                                <p className="text-sm font-semibold text-white mt-0.5">
+                                                    {formatarValorExibicao(totalAtrasado)} em atraso
+                                                </p>
+                                            </div>
+                                        </div>
+                                        <a
+                                            href={gerarLinkWhatsApp()}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/95 hover:bg-white text-green-600 font-bold text-xs transition-all duration-200 shrink-0 shadow-md hover:shadow-lg hover:scale-105 whitespace-nowrap ml-3"
+                                        >
+                                            <Icon name="chat" className="text-base" />
+                                            WhatsApp
+                                        </a>
                                     </div>
                                 )}
 

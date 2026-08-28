@@ -10,6 +10,7 @@ export const icons = {
   calendar_today: 'calendar_today',
   call: 'call',
   cart: 'cart',
+  chat: 'chat',
   chevron_left: 'chevron_left',
   chevron_right: 'chevron_right',
   clients: 'clients',
