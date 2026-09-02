@@ -1,6 +1,7 @@
 'use client'
 
 import { Icon } from '@/components/ui/icon'
+import { formatarInteiroComoMoeda } from '@/services/formatters'
 import { atualizarPagamento } from '@/services/pagamentoService'
 import { useEffect, useState } from 'react'
 
@@ -58,7 +59,7 @@ function criarCamposIniciais(pagamento: Pagamento | null) {
     return {
         cliente: pagamento.cliente,
         mes: pagamento.mesRef.split(' ')[0].toLowerCase(),
-        valor: pagamento.valor.replace('R$ ', ''),
+        valor: pagamento.valor.replace(/^R\$\s*/i, '').trim(),
         vencimento: formatarDataParaInput(pagamento.vencimento),
         forma: pagamento.forma || 'pix',
         status: pagamento.status,
@@ -206,7 +207,7 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
                                 <input
                                     type="text"
                                     value={valor}
-                                    onChange={(e) => setValor(e.target.value)}
+                                    onChange={(e) => setValor(formatarInteiroComoMoeda(e.target.value))}
                                     className="w-full bg-slate-100 border-none rounded-full pl-12 pr-5 py-3 text-slate-900 font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500/30"
                                 />
                             </div>
