@@ -24,6 +24,7 @@ interface Pagamento {
   id: string
   iniciais: string
   cliente: string
+  telefoneCliente: string  // ✅ ADICIONADO
   descricaoAtendimento: string
   mesRef: string
   valor: string
@@ -77,11 +78,13 @@ function mapearStatus(status: string): 'pago' | 'pendente' | 'atrasado' {
   return mapa[status] ?? 'pendente'
 }
 
+// ✅ MAPEAMENTO ATUALIZADO
 function mapearParaLocal(pag: PagamentoAPI): Pagamento {
   return {
     id: String(pag.id),
     iniciais: obterIniciais(pag.cliente),
     cliente: pag.cliente,
+    telefoneCliente: pag.telefoneCliente,  // ✅ ADICIONADO
     descricaoAtendimento: pag.atendimento.descricao,
     mesRef: formatarMesRef(pag.data),
     valor: formatarValor(pag.valor),
@@ -91,6 +94,24 @@ function mapearParaLocal(pag: PagamentoAPI): Pagamento {
     forma: pag.forma,
     observacao: pag.observacao,
   }
+}
+
+// ✅ FUNÇÃO PARA GERAR LINK WHATSAPP
+function gerarLinkWhatsApp(cliente: string, telefone: string, valor: string, vencimento: string): string {
+  if (!telefone) return ''
+  
+  const telefoneLimpo = telefone.replace(/\D/g, '')
+  const numeroFormatado = telefoneLimpo.startsWith('55') ? telefoneLimpo : `55${telefoneLimpo}`
+  
+  const mensagem = encodeURIComponent(
+    `Olá *${cliente}*! 👋\n\n` +
+    `Vejo que há um pagamento vencido em sua conta.\n\n` +
+    `💰 Valor: ${valor}\n` +
+    `📅 Vencimento: ${vencimento}\n\n` +
+    `Podemos conversar sobre isso?`
+  )
+  
+  return `https://wa.me/${numeroFormatado}?text=${mensagem}`
 }
 
 // ==========================================
@@ -214,6 +235,14 @@ export function PagamentosPage() {
       await carregarPagamentos()
     } catch {
       setErro('Erro ao atualizar status do pagamento.')
+    }
+  }
+
+  // ✅ HANDLER WHATSAPP
+  const handleCobraNoWhatsApp = (pagamento: Pagamento) => {
+    const link = gerarLinkWhatsApp(pagamento.cliente, pagamento.telefoneCliente, pagamento.valor, pagamento.vencimento)
+    if (link) {
+      window.open(link, '_blank')
     }
   }
 
@@ -390,8 +419,11 @@ export function PagamentosPage() {
                           </button>
                         )}
                         {pag.status === 'atrasado' && (
-                          <button className="text-red-600 hover:underline text-xs font-bold px-3 py-1 rounded-lg border border-red-200">
-                            Cobrar Cliente
+                          <button
+                            onClick={() => handleCobraNoWhatsApp(pag)}
+                            className="text-red-600 hover:underline text-xs font-bold px-3 py-1 rounded-lg border border-red-200"
+                          >
+                            Cobrar no WhatsApp
                           </button>
                         )}
                         <button
