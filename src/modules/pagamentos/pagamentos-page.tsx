@@ -3,6 +3,7 @@
 import { Icon } from '@/components/ui/icon'
 import { useState, useEffect, useCallback } from 'react'
 import { EditarPagamentoModal } from '@/components/ui/EditarPagamentoModal'
+import { DeletarPagamentoModal } from '@/components/ui/DeletarPagamentoModal'  // ✅ NOVO
 import {
   listarPagamentos,
   deletarPagamento as deletarPagamentoService,
@@ -24,7 +25,7 @@ interface Pagamento {
   id: string
   iniciais: string
   cliente: string
-  telefoneCliente: string  // ✅ ADICIONADO
+  telefoneCliente: string
   descricaoAtendimento: string
   mesRef: string
   valor: string
@@ -78,13 +79,12 @@ function mapearStatus(status: string): 'pago' | 'pendente' | 'atrasado' {
   return mapa[status] ?? 'pendente'
 }
 
-// ✅ MAPEAMENTO ATUALIZADO
 function mapearParaLocal(pag: PagamentoAPI): Pagamento {
   return {
     id: String(pag.id),
     iniciais: obterIniciais(pag.cliente),
     cliente: pag.cliente,
-    telefoneCliente: pag.telefoneCliente,  // ✅ ADICIONADO
+    telefoneCliente: pag.telefoneCliente,
     descricaoAtendimento: pag.atendimento.descricao,
     mesRef: formatarMesRef(pag.data),
     valor: formatarValor(pag.valor),
@@ -96,7 +96,6 @@ function mapearParaLocal(pag: PagamentoAPI): Pagamento {
   }
 }
 
-// ✅ FUNÇÃO PARA GERAR LINK WHATSAPP
 function gerarLinkWhatsApp(cliente: string, telefone: string, valor: string, vencimento: string): string {
   if (!telefone) return ''
   
@@ -153,6 +152,10 @@ export function PagamentosPage() {
   const [modalAberto, setModalAberto] = useState(false)
   const [pagamentoSelecionado, setPagamentoSelecionado] = useState<Pagamento | null>(null)
 
+  // ✅ NOVOS STATES PARA MODAL DE DELEÇÃO
+  const [modalDeletarAberto, setModalDeletarAberto] = useState(false)
+  const [pagamentoDeletando, setPagamentoDeletando] = useState<Pagamento | null>(null)
+
   // ===== FILTROS =====
   const [filtroStatus, setFiltroStatus] = useState<'pago' | 'pendente' | 'atrasado' | ''>('')
   const [filtroCliente, setFiltroCliente] = useState('')
@@ -174,7 +177,6 @@ export function PagamentosPage() {
   const inicio = (paginaAtual - 1) * ITENS_POR_PAGINA
   const pagamentosPagina = pagamentosFiltrados.slice(inicio, inicio + ITENS_POR_PAGINA)
 
-  // Botões de página visíveis: até 5 centrados na página atual
   const botoesVisiveis = (): number[] => {
     const delta = 2
     const left = Math.max(1, paginaAtual - delta)
@@ -184,7 +186,6 @@ export function PagamentosPage() {
     return range
   }
 
-  // Reseta para página 1 sempre que um filtro mudar
   useEffect(() => {
     setPaginaAtual(1)
   }, [filtroStatus, filtroCliente, filtroMes])
@@ -238,7 +239,6 @@ export function PagamentosPage() {
     }
   }
 
-  // ✅ HANDLER WHATSAPP
   const handleCobraNoWhatsApp = (pagamento: Pagamento) => {
     const link = gerarLinkWhatsApp(pagamento.cliente, pagamento.telefoneCliente, pagamento.valor, pagamento.vencimento)
     if (link) {
@@ -246,13 +246,10 @@ export function PagamentosPage() {
     }
   }
 
-  const handleDeletar = async (id: string) => {
-    try {
-      await deletarPagamentoService(id)
-      await carregarPagamentos()
-    } catch {
-      setErro('Erro ao deletar pagamento.')
-    }
+  // ✅ NOVO HANDLER PARA DELETAR
+  const handleDeletar = (pag: Pagamento) => {
+    setPagamentoDeletando(pag)
+    setModalDeletarAberto(true)
   }
 
   // ===== ESTADOS DE LOADING / ERRO =====
@@ -433,8 +430,9 @@ export function PagamentosPage() {
                         >
                           <Icon name="edit" className="text-lg" />
                         </button>
+                        {/* ✅ BOTÃO DELETAR ATUALIZADO */}
                         <button
-                          onClick={() => handleDeletar(pag.id)}
+                          onClick={() => handleDeletar(pag)}
                           className="text-slate-500 hover:text-red-600 transition-colors"
                           title="Deletar pagamento"
                         >
@@ -490,7 +488,7 @@ export function PagamentosPage() {
         )}
       </div>
 
-      {/* ===== MODAL ===== */}
+      {/* ===== MODAL EDITAR ===== */}
       <EditarPagamentoModal
         key={pagamentoSelecionado?.id ?? 'novo-pagamento'}
         isOpen={modalAberto}
@@ -498,6 +496,30 @@ export function PagamentosPage() {
         onClose={() => {
           setModalAberto(false)
           setPagamentoSelecionado(null)
+          carregarPagamentos()
+        }}
+      />
+
+      {/* ✅ MODAL DELETAR ===== */}
+      <DeletarPagamentoModal
+        isOpen={modalDeletarAberto}
+        onClose={() => {
+          setModalDeletarAberto(false)
+          setPagamentoDeletando(null)
+        }}
+        pagamento={
+          pagamentoDeletando
+            ? {
+                id: pagamentoDeletando.id,
+                cliente: pagamentoDeletando.cliente,
+                valor: pagamentoDeletando.valor,
+                vencimento: pagamentoDeletando.vencimento,
+              }
+            : null
+        }
+        onExcluido={() => {
+          setModalDeletarAberto(false)
+          setPagamentoDeletando(null)
           carregarPagamentos()
         }}
       />
