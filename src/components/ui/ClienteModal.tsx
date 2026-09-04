@@ -239,16 +239,11 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
     }
   }
 
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget && !carregando) onClose()
-  }
-
   if (!isOpen) return null
 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-sm"
-      onClick={handleOverlayClick}
     >
       {/* Modal Container */}
       <div

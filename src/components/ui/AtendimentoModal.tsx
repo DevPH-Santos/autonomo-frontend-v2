@@ -590,7 +590,7 @@ export function AtendimentoModal({
     <>
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-sm"
-        onClick={handleTentarFechar}
+        // onClick={handleTentarFechar}
       >
         <div
           className="w-full max-w-3xl max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300"

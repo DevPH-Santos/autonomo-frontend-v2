@@ -196,13 +196,6 @@ export function VisualizarClienteModal({
         setErroServidor(null)
     }
 
-    const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        if (e.target === e.currentTarget && !deletando) {
-            setConfirmarDelecao(false)
-            onClose()
-        }
-    }
-
     const formatarValorLocal = (valor: number | string | undefined): string => {
         if (!valor && valor !== 0) return '—'
         const num = typeof valor === 'string' ? parseFloat(valor.replace(',', '.')) : valor
@@ -217,7 +210,6 @@ export function VisualizarClienteModal({
             {/* Modal de Visualização */}
             <div
                 className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/45 backdrop-blur-sm"
-                onClick={handleOverlayClick}
             >
                 <div
                     className="w-full max-w-2xl max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-2xl flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300"

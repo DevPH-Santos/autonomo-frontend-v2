@@ -146,7 +146,7 @@ export function ProdutoModal({
             {/* Overlay principal */}
             <div
                 className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
-                onClick={handleTentarFechar}
+                // onClick={handleTentarFechar}
             >
                 <div
                     className="w-full max-w-md bg-white rounded-2xl shadow-xl overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300"

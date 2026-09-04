@@ -126,7 +126,7 @@ export function EditarPagamentoModal({ isOpen, onClose, pagamento }: EditarPagam
     return (
         <div
             className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
-            onClick={onClose}
+            // onClick={onClose}
         >
             <div
                 className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col animate-in fade-in slide-in-from-bottom-4 duration-300"
