@@ -35,17 +35,17 @@ const formatarValorExibicao = (valor: number | string | undefined): string => {
 // "Agendado" | "Em Andamento" | "Pendente" | "Realizado"
 const badgeAtendimento = (status: Atendimento['status_atendimento']): string => {
     switch (status) {
-        case 'Realizado':    return 'bg-green-100 text-green-700'
+        case 'Realizado': return 'bg-green-100 text-green-700'
         case 'Em Andamento': return 'bg-blue-100 text-blue-700'
-        case 'Agendado':     return 'bg-sky-100 text-sky-700'
-        case 'Pendente':     return 'bg-amber-100 text-amber-700'
+        case 'Agendado': return 'bg-sky-100 text-sky-700'
+        case 'Pendente': return 'bg-amber-100 text-amber-700'
     }
 }
 
 // "Pago" | "Pendente" | "Atrasado"
 const badgePagamento = (status: Pagamento['status']): string => {
     switch (status) {
-        case 'Pago':     return 'bg-green-100 text-green-700'
+        case 'Pago': return 'bg-green-100 text-green-700'
         case 'Atrasado': return 'bg-red-100 text-red-700'
         case 'Pendente': return 'bg-amber-100 text-amber-700'
     }
@@ -140,7 +140,20 @@ export function VisualizarClienteModal({
         ? pagamentos
         : pagamentos.slice(0, 5)
 
-    // ── Helper para gerar link WhatsApp ─────────────────────────────────────
+    // ── Helper para gerar link WhatsApp para cliente inadimplente ─────────────────────────────────────
+    const gerarLinkWhatsAppInadimplente = (): string => {
+        if (!cliente?.telefone_cliente) return ''
+        // Remove caracteres especiais do telefone
+        const telefone = cliente.telefone_cliente.replace(/\D/g, '')
+        // Se não começar com 55, adiciona código do Brasil
+        const numeroFormatado = telefone.startsWith('55') ? telefone : `55${telefone}`
+        const mensagem = encodeURIComponent(
+            `Olá *${cliente.nome_cliente}*!\n\nVi que há pagamento(s) em atraso na sua conta. Podemos conversar sobre isso?\n\nTotal atrasado: ${formatarValorExibicao(totalAtrasado)}`
+        )
+        return `https://wa.me/${numeroFormatado}?text=${mensagem}`
+    }
+
+    // ── Helper para gerar link WhatsApp para cliente pagamento em dia ─────────────────────────────────────
     const gerarLinkWhatsApp = (): string => {
         if (!cliente?.telefone_cliente) return ''
         // Remove caracteres especiais do telefone
@@ -148,7 +161,7 @@ export function VisualizarClienteModal({
         // Se não começar com 55, adiciona código do Brasil
         const numeroFormatado = telefone.startsWith('55') ? telefone : `55${telefone}`
         const mensagem = encodeURIComponent(
-            `Olá *${cliente.nome_cliente}*! 👋\n\nVi que há pagamento(s) em atraso na sua conta. Podemos conversar sobre isso?\n\nTotal atrasado: ${formatarValorExibicao(totalAtrasado)}`
+            `Olá *${cliente.nome_cliente}*!\n\nTudo bem?`
         )
         return `https://wa.me/${numeroFormatado}?text=${mensagem}`
     }
@@ -383,7 +396,7 @@ export function VisualizarClienteModal({
                                 )}
 
                                 {/* Alerta de Pagamento Atrasado com Link WhatsApp */}
-                                {temPagamentoAtrasado && cliente.telefone_cliente && (
+                                {temPagamentoAtrasado && cliente.telefone_cliente ? (
                                     <div className="rounded-xl bg-gradient-to-r from-red-600 to-rose-600 p-5 flex items-center justify-between shadow-md shadow-red-200 border border-red-400/30 animate-in fade-in slide-in-from-top-2 duration-300">
                                         <div className="flex items-center gap-3 flex-1">
                                             <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/20 shrink-0">
@@ -399,7 +412,7 @@ export function VisualizarClienteModal({
                                             </div>
                                         </div>
                                         <a
-                                            href={gerarLinkWhatsApp()}
+                                            href={gerarLinkWhatsAppInadimplente()}
                                             target="_blank"
                                             rel="noopener noreferrer"
                                             className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white/95 hover:bg-white text-green-600 font-bold text-xs transition-all duration-200 shrink-0 shadow-md hover:shadow-lg hover:scale-105 whitespace-nowrap ml-3"
@@ -408,7 +421,30 @@ export function VisualizarClienteModal({
                                             WhatsApp
                                         </a>
                                     </div>
-                                )}
+                                ) : <div className="rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 p-5 flex items-center justify-between shadow-md shadow-emerald-200/50 border border-emerald-400/30 animate-in fade-in slide-in-from-top-2 duration-300">
+                                    <div className="flex items-center gap-3 flex-1">
+                                        <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-white/20 shrink-0">
+                                            {/* Alterado para o ícone de chat/whatsapp correspondente à sua biblioteca */}
+                                            <Icon name="chat" className="text-white text-lg" />
+                                        </div>
+                                        <div className="min-w-0">
+                                            <p className="text-xs font-bold uppercase tracking-wider text-emerald-100">
+                                                Entrar em contato
+                                            </p>
+                                            <p className="text-sm font-semibold text-white mt-0.5">
+                                                {cliente.nome_cliente}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <a
+                                        href={gerarLinkWhatsApp()}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white hover:bg-emerald-50 text-emerald-600 font-bold text-xs transition-all duration-200 shrink-0 shadow-md hover:shadow-lg hover:scale-105 whitespace-nowrap ml-3"
+                                    >
+                                        <Icon name="chat" className="text-base" /> WhatsApp
+                                    </a>
+                                </div> }
 
                                 {/* Histórico de Atendimentos */}
                                 <section className="space-y-3">
