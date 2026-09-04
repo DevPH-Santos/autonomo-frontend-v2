@@ -16,7 +16,9 @@ interface FormData {
   nome_cliente: string
   telefone_cliente: string
   email_cliente: string
+  cep_cliente: string
   endereco_cliente: string
+  casa_cliente: string
   bairro_cliente: string
   tipo_contratacao_cliente: 'Fixo' | 'Eventual'
   frequencia_cliente: 'Semanal' | 'Quinzenal' | 'Mensal'
@@ -30,7 +32,9 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
     nome_cliente: '',
     telefone_cliente: '',
     email_cliente: '',
+    cep_cliente: '',
     endereco_cliente: '',
+    casa_cliente: '',
     bairro_cliente: '',
     tipo_contratacao_cliente: 'Fixo',
     frequencia_cliente: 'Semanal',
@@ -41,6 +45,8 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
 
   const [erros, setErros] = useState<Record<string, boolean>>({})
   const [carregando, setCarregando] = useState(false)
+  const [buscandoCep, setBuscandoCep] = useState(false)
+  const [erroCep, setErroCep] = useState<string | null>(null)
   const [erroServidor, setErroServidor] = useState<string | null>(null)
 
   const camposObrigatorios = ['nome_cliente', 'telefone_cliente', 'email_cliente', 'endereco_cliente', 'bairro_cliente', 'valor_visita_cliente']
@@ -56,7 +62,9 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
         nome_cliente: clienteParaEditar.nome_cliente || '',
         telefone_cliente: clienteParaEditar.telefone_cliente || '',
         email_cliente: clienteParaEditar.email_cliente || '',
+        cep_cliente: '',
         endereco_cliente: clienteParaEditar.endereco_cliente || '',
+        casa_cliente: '',
         bairro_cliente: clienteParaEditar.bairro_cliente || '',
         tipo_contratacao_cliente: (clienteParaEditar.tipo_contratacao_cliente as 'Fixo' | 'Eventual') || 'Fixo',
         frequencia_cliente: (clienteParaEditar.frequencia_cliente as 'Semanal' | 'Quinzenal' | 'Mensal') || 'Semanal',
@@ -70,7 +78,9 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
         nome_cliente: '',
         telefone_cliente: '',
         email_cliente: '',
+        cep_cliente: '',
         endereco_cliente: '',
+        casa_cliente: '',
         bairro_cliente: '',
         tipo_contratacao_cliente: 'Fixo',
         frequencia_cliente: 'Semanal',
@@ -80,6 +90,7 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
       })
     }
     setErros({})
+    setErroCep(null)
     setErroServidor(null)
   }, [clienteParaEditar, isOpen])
 
@@ -138,6 +149,84 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
     return apenasInteiros.length === 0 ? '' : integrosFormatados
   }
 
+
+  const formatarCep = (valor: string): string => {
+    const apenasNumeros = valor.replace(/\D/g, '').slice(0, 8)
+
+    if (apenasNumeros.length <= 5) {
+      return apenasNumeros
+    }
+
+    return `${apenasNumeros.slice(0, 5)}-${apenasNumeros.slice(5)}`
+  }
+
+  const buscarCep = async (cep: string) => {
+    const cepLimpo = cep.replace(/\D/g, '')
+
+    // O CEP é opcional. A API só é consultada quando houver 8 dígitos.
+    if (cepLimpo.length !== 8) {
+      setErroCep(null)
+      return
+    }
+
+    try {
+      setBuscandoCep(true)
+      setErroCep(null)
+
+      const resposta = await fetch(`https://viacep.com.br/ws/${cepLimpo}/json/`)
+
+      if (!resposta.ok) {
+        throw new Error('Não foi possível consultar o CEP.')
+      }
+
+      const dados = await resposta.json()
+
+      if (dados.erro) {
+        setErroCep('CEP não encontrado.')
+        return
+      }
+
+      setForm((prev) => ({
+        ...prev,
+        endereco_cliente: dados.logradouro || prev.endereco_cliente,
+        bairro_cliente: dados.bairro || prev.bairro_cliente,
+      }))
+
+      setErros((prev) => ({
+        ...prev,
+        endereco_cliente: false,
+        bairro_cliente: false,
+      }))
+    } catch (erro) {
+      console.error('Erro ao consultar CEP:', erro)
+      setErroCep('Não foi possível consultar o CEP. Preencha o endereço manualmente.')
+    } finally {
+      setBuscandoCep(false)
+    }
+  }
+
+  const handleCepChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const cepFormatado = formatarCep(e.target.value)
+
+    setForm((prev) => ({
+      ...prev,
+      cep_cliente: cepFormatado,
+    }))
+
+    setErroCep(null)
+    setErroServidor(null)
+
+    if (cepFormatado.replace(/\D/g, '').length === 8) {
+      buscarCep(cepFormatado)
+    }
+  }
+
+  const handleCepBlur = () => {
+    if (form.cep_cliente.replace(/\D/g, '').length === 8) {
+      buscarCep(form.cep_cliente)
+    }
+  }
+
   const handleTelefoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { value } = e.target
     const formatado = formatarTelefone(value)
@@ -147,9 +236,25 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
   }
 
   const handleValorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const formatado = formatarInteiroComoMoeda(e.target.value)
-    setForm((prev) => ({ ...prev, valor_visita_cliente: formatado }))
-    setErros((prev) => ({ ...prev, valor_visita_cliente: false }))
+    const valorOriginal = e.target.value;
+
+    // 1. Remove tudo o que não for dígito para obter o valor numérico limpo
+    const apenasNumeros = valorOriginal.replace(/\D/g, '');
+
+    // 2. Se o usuário digitar mais de 10 dígitos, impede a digitação
+    if (apenasNumeros.length > 10) {
+      return; // Interrompe a função aqui e não atualiza o estado
+    }
+
+    // Opcional: Se quiser validar pelo valor matemático real (max: 99999999.99)
+    // const valorNumerico = parseFloat(apenasNumeros) / 100;
+    // if (valorNumerico > 99999999.99) return;
+
+    // 3. Se passou na validação, formata e atualiza o estado normalmente
+    const formatado = formatarInteiroComoMoeda(valorOriginal);
+
+    setForm((prev) => ({ ...prev, valor_visita_cliente: formatado }));
+    setErros((prev) => ({ ...prev, valor_visita_cliente: false }));
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
@@ -169,6 +274,11 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
         novosErros[campo] = true
       }
     })
+
+    // N° Casa é obrigatório, mas não será salvo como campo separado.
+    if (!form.casa_cliente.trim()) {
+      novosErros.casa_cliente = true
+    }
 
     // Valida se tem números
     if (form.valor_visita_cliente && !/\d/.test(form.valor_visita_cliente)) {
@@ -193,7 +303,7 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
         nome_cliente: form.nome_cliente.trim(),
         telefone_cliente: form.telefone_cliente,
         email_cliente: form.email_cliente.trim(),
-        endereco_cliente: form.endereco_cliente.trim(),
+        endereco_cliente: `${form.endereco_cliente.trim()}, ${form.casa_cliente.trim()}`,
         bairro_cliente: form.bairro_cliente.trim(),
         tipo_contratacao_cliente: form.tipo_contratacao_cliente,
         frequencia_cliente: form.frequencia_cliente,
@@ -215,7 +325,9 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
         nome_cliente: '',
         telefone_cliente: '',
         email_cliente: '',
+        cep_cliente: '',
         endereco_cliente: '',
+        casa_cliente: '',
         bairro_cliente: '',
         tipo_contratacao_cliente: 'Fixo',
         frequencia_cliente: 'Semanal',
@@ -356,12 +468,33 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-slate-900 mb-1.5">
-                  Endereço
+                  CEP
+                </label>
+                <input
+                  type="text"
+                  name="cep_cliente"
+                  placeholder="12345-678"
+                  value={form.cep_cliente}
+                  onChange={handleCepChange}
+                  onBlur={handleCepBlur}
+                  disabled={carregando || buscandoCep}
+                  className="w-full px-4 py-3 rounded-lg border-2 border-slate-200 bg-slate-100 text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white disabled:opacity-50"
+                />
+                {buscandoCep && (
+                  <span className="text-xs text-blue-600 mt-1 block">Consultando CEP...</span>
+                )}
+                {erroCep && (
+                  <span className="text-xs text-amber-600 mt-1 block">{erroCep}</span>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1.5">
+                  Rua
                 </label>
                 <input
                   type="text"
                   name="endereco_cliente"
-                  placeholder="Rua, número, apto"
+                  placeholder="Rua das Flores "
                   value={form.endereco_cliente}
                   onChange={handleChange}
                   disabled={carregando}
@@ -371,6 +504,26 @@ export function ClienteModal({ isOpen, onClose, onClienteSalvo, clienteParaEdita
                     } focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white`}
                 />
                 {erros.endereco_cliente && (
+                  <span className="text-xs text-red-600 mt-1 block">Campo obrigatório</span>
+                )}
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-900 mb-1.5">
+                  N° Casa
+                </label>
+                <input
+                  type="text"
+                  name="casa_cliente"
+                  placeholder="39 B"
+                  value={form.casa_cliente}
+                  onChange={handleChange}
+                  disabled={carregando}
+                  className={`w-full px-4 py-3 rounded-lg border-2 transition-colors disabled:opacity-50 ${erros.casa_cliente
+                    ? 'border-red-500 bg-red-50 text-red-900'
+                    : 'border-slate-200 bg-slate-100 text-slate-900'
+                    } focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:bg-white`}
+                />
+                {erros.casa_cliente && (
                   <span className="text-xs text-red-600 mt-1 block">Campo obrigatório</span>
                 )}
               </div>
