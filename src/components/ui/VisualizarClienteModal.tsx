@@ -308,7 +308,7 @@ export function VisualizarClienteModal({
                             <div className="bg-slate-50 rounded-xl border border-slate-200 p-4">
                                 <div className="flex items-start gap-2">
                                     <Icon name="location_on" className="text-slate-400 text-base mt-0.5 shrink-0" />
-                                    <p className="text-sm text-slate-700">{cliente.endereco_cliente || '—'}</p>
+                                    <p className="text-sm text-slate-700">{`${cliente.endereco_cliente} - ${cliente.bairro_cliente}` || '—'}</p>
                                 </div>
                             </div>
                         </section>
