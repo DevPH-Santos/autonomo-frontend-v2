@@ -80,12 +80,17 @@ function mapearStatus(status: string): 'pago' | 'pendente' | 'atrasado' {
 }
 
 function mapearParaLocal(pag: PagamentoAPI): Pagamento {
+  const cliente = pag.cliente ?? 'Cliente não disponível'
+  const telefoneCliente = pag.telefoneCliente ?? ''
+  const descricaoAtendimento =
+    pag.atendimento?.descricao ?? 'Atendimento excluído'
+
   return {
     id: String(pag.id),
-    iniciais: obterIniciais(pag.cliente),
-    cliente: pag.cliente,
-    telefoneCliente: pag.telefoneCliente,
-    descricaoAtendimento: pag.atendimento.descricao,
+    iniciais: obterIniciais(cliente),
+    cliente,
+    telefoneCliente,
+    descricaoAtendimento,
     mesRef: formatarMesRef(pag.data),
     valor: formatarValor(pag.valor),
     valorNumerico: pag.valor,
@@ -98,10 +103,10 @@ function mapearParaLocal(pag: PagamentoAPI): Pagamento {
 
 function gerarLinkWhatsApp(cliente: string, telefone: string, valor: string, vencimento: string): string {
   if (!telefone) return ''
-  
+
   const telefoneLimpo = telefone.replace(/\D/g, '')
   const numeroFormatado = telefoneLimpo.startsWith('55') ? telefoneLimpo : `55${telefoneLimpo}`
-  
+
   const mensagem = encodeURIComponent(
     `Olá *${cliente}*! 👋\n\n` +
     `Vejo que há um pagamento vencido em sua conta.\n\n` +
@@ -109,7 +114,7 @@ function gerarLinkWhatsApp(cliente: string, telefone: string, valor: string, ven
     `📅 Vencimento: ${vencimento}\n\n` +
     `Podemos conversar sobre isso?`
   )
-  
+
   return `https://wa.me/${numeroFormatado}?text=${mensagem}`
 }
 
@@ -466,11 +471,10 @@ export function PagamentosPage() {
                 <button
                   key={num}
                   onClick={() => setPaginaAtual(num)}
-                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${
-                    paginaAtual === num
+                  className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${paginaAtual === num
                       ? 'bg-blue-600 text-white'
                       : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
-                  }`}
+                    }`}
                 >
                   {num}
                 </button>
@@ -510,11 +514,11 @@ export function PagamentosPage() {
         pagamento={
           pagamentoDeletando
             ? {
-                id: pagamentoDeletando.id,
-                cliente: pagamentoDeletando.cliente,
-                valor: pagamentoDeletando.valor,
-                vencimento: pagamentoDeletando.vencimento,
-              }
+              id: pagamentoDeletando.id,
+              cliente: pagamentoDeletando.cliente,
+              valor: pagamentoDeletando.valor,
+              vencimento: pagamentoDeletando.vencimento,
+            }
             : null
         }
         onExcluido={() => {

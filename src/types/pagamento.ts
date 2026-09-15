@@ -7,11 +7,11 @@ export interface Pagamento {
     status: StatusPagamento;
     forma: string;
     observacao: string | null;
-    cliente: string;
-    telefoneCliente: string;
+    cliente: string | null;
+    telefoneCliente: string | null;
     atendimento: {
-        id: string | number;
-        descricao: string;
+        id: string | number | null;
+        descricao: string | null;
     };
 }
 
