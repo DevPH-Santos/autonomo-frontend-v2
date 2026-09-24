@@ -269,7 +269,7 @@ function LembreteCard({ lembrete: l, onConcluir, onReabrir, onEditar, onDeletar 
 }
 
 // ==========================================
-// COMPONENTE PRINCIPAL
+// PÁGINA PRINCIPAL
 // ==========================================
 
 export function LembretesPage() {
@@ -307,6 +307,10 @@ export function LembretesPage() {
     return range
   }
 
+  useEffect(() => {
+    setPaginaAtual(1)
+  }, [filtroTipo, filtroStatus, filtroPeriodo])
+
   // ===== BUSCA DE DADOS =====
 
   const carregarLembretes = useCallback(async () => {
@@ -323,7 +327,7 @@ export function LembretesPage() {
   }, [])
 
   useEffect(() => {
-    void Promise.resolve().then(carregarLembretes)
+    carregarLembretes()
   }, [carregarLembretes])
 
   // ===== MÉTRICAS =====
@@ -371,29 +375,6 @@ export function LembretesPage() {
     } catch {
       setErro('Erro ao deletar lembrete.')
     }
-  }
-
-  // ===== LOADING / ERRO =====
-
-  if (carregando) {
-    return (
-      <div className="flex items-center justify-center h-64 text-slate-500">
-        <Icon name="refresh" className="animate-spin mr-2" />
-        Carregando lembretes...
-      </div>
-    )
-  }
-
-  if (erro) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-500">
-        <Icon name="warning" className="text-red-400 text-4xl" />
-        <p className="text-sm font-medium">{erro}</p>
-        <button onClick={carregarLembretes} className="text-xs font-bold text-blue-600 underline">
-          Tentar novamente
-        </button>
-      </div>
-    )
   }
 
   return (
@@ -465,10 +446,7 @@ export function LembretesPage() {
         <div className="flex flex-wrap gap-3 flex-1">
           <select
             value={filtroTipo}
-            onChange={(e) => {
-              setFiltroTipo(e.target.value as typeof filtroTipo)
-              setPaginaAtual(1)
-            }}
+            onChange={(e) => setFiltroTipo(e.target.value as typeof filtroTipo)}
             className="bg-white border-none rounded-lg text-xs font-semibold px-4 py-2 focus:ring-2 focus:ring-blue-500/30 text-slate-900"
           >
             <option value="">Tipo: Todos</option>
@@ -480,10 +458,7 @@ export function LembretesPage() {
 
           <select
             value={filtroStatus}
-            onChange={(e) => {
-              setFiltroStatus(e.target.value as typeof filtroStatus)
-              setPaginaAtual(1)
-            }}
+            onChange={(e) => setFiltroStatus(e.target.value as typeof filtroStatus)}
             className="bg-white border-none rounded-lg text-xs font-semibold px-4 py-2 focus:ring-2 focus:ring-blue-500/30 text-slate-900"
           >
             <option value="">Status: Todos</option>
@@ -494,10 +469,7 @@ export function LembretesPage() {
 
           <select
             value={filtroPeriodo}
-            onChange={(e) => {
-              setFiltroPeriodo(e.target.value)
-              setPaginaAtual(1)
-            }}
+            onChange={(e) => setFiltroPeriodo(e.target.value)}
             className="bg-white border-none rounded-lg text-xs font-semibold px-4 py-2 focus:ring-2 focus:ring-blue-500/30 text-slate-900"
           >
             <option value="">Período: Todos</option>
@@ -520,7 +492,16 @@ export function LembretesPage() {
 
       {/* ===== CARDS ===== */}
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
-        {lembretesFiltrados.length === 0 ? (
+        {carregando ? (
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <div className="inline-block animate-spin">
+                <Icon name="refresh" className="text-4xl text-blue-600" />
+              </div>
+              <p className="mt-4 text-slate-600 font-medium">Carregando lembretes...</p>
+            </div>
+          </div>
+        ) : lembretesFiltrados.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-2">
             <Icon name="notifications_off" className="text-4xl" />
             <p className="text-sm font-medium">Nenhum lembrete encontrado.</p>

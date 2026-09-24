@@ -259,26 +259,26 @@ export function PagamentosPage() {
 
   // ===== ESTADOS DE LOADING / ERRO =====
 
-  if (carregando) {
-    return (
-      <div className="flex items-center justify-center h-64 text-slate-500">
-        <Icon name="refresh" className="animate-spin mr-2" />
-        Carregando pagamentos...
-      </div>
-    )
-  }
+  // if (carregando) {
+  //   return (
+  //     <div className="flex items-center justify-center h-64 text-slate-500">
+  //       <Icon name="refresh" className="animate-spin mr-2" />
+  //       Carregando pagamentos...
+  //     </div>
+  //   )
+  // }
 
-  if (erro) {
-    return (
-      <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-500">
-        <Icon name="warning" className="text-red-400 text-4xl" />
-        <p className="text-sm font-medium">{erro}</p>
-        <button onClick={carregarPagamentos} className="text-xs font-bold text-blue-600 underline">
-          Tentar novamente
-        </button>
-      </div>
-    )
-  }
+  // if (erro) {
+  //   return (
+  //     <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-500">
+  //       <Icon name="warning" className="text-red-400 text-4xl" />
+  //       <p className="text-sm font-medium">{erro}</p>
+  //       <button onClick={carregarPagamentos} className="text-xs font-bold text-blue-600 underline">
+  //         Tentar novamente
+  //       </button>
+  //     </div>
+  //   )
+  // }
 
   return (
     <div className="space-y-8">
@@ -376,81 +376,104 @@ export function PagamentosPage() {
 
       {/* ===== TABELA ===== */}
       <div className="bg-white rounded-2xl overflow-hidden shadow-sm border border-slate-200">
-        {pagamentosFiltrados.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-2">
-            <Icon name="receipt_long" className="text-4xl" />
-            <p className="text-sm font-medium">Nenhum pagamento encontrado.</p>
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="bg-slate-100 border-b border-slate-200">
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Cliente</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Mês Ref.</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Valor</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Vencimento</th>
-                  <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Status</th>
-                  <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Ações</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {pagamentosPagina.map((pag) => (
-                  <tr key={pag.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <ClientAvatar iniciais={pag.iniciais} />
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">{pag.cliente}</p>
-                          <p className="text-xs text-slate-500">{pag.descricaoAtendimento}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-900">{pag.mesRef}</td>
-                    <td className="px-6 py-4 text-sm font-bold text-slate-900">{pag.valor}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600">{pag.vencimento}</td>
-                    <td className="px-6 py-4"><StatusBadge status={pag.status} /></td>
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        {pag.status === 'pendente' && (
-                          <button
-                            onClick={() => handleMarcarPago(pag.id)}
-                            className="text-blue-600 hover:underline text-xs font-bold px-3 py-1 rounded-lg bg-blue-50"
-                          >
-                            Marcar Pago
-                          </button>
-                        )}
-                        {pag.status === 'atrasado' && (
-                          <button
-                            onClick={() => handleCobraNoWhatsApp(pag)}
-                            className="text-red-600 hover:underline text-xs font-bold px-3 py-1 rounded-lg border border-red-200"
-                          >
-                            Cobrar no WhatsApp
-                          </button>
-                        )}
-                        <button
-                          onClick={() => handleEditarPagamento(pag)}
-                          className="text-slate-500 hover:text-blue-600 transition-colors"
-                          title="Editar pagamento"
-                        >
-                          <Icon name="edit" className="text-lg" />
-                        </button>
-                        {/* ✅ BOTÃO DELETAR ATUALIZADO */}
-                        <button
-                          onClick={() => handleDeletar(pag)}
-                          className="text-slate-500 hover:text-red-600 transition-colors"
-                          title="Deletar pagamento"
-                        >
-                          <Icon name="delete" className="text-lg" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
+
+        {carregando ?
+          (
+
+            <div className="flex items-center justify-center py-12">
+              <div className="text-center">
+                <div className="inline-block animate-spin">
+                  <Icon name="refresh" className="text-4xl text-blue-600" />
+                </div>
+                <p className="mt-4 text-slate-600 font-medium">Carregando pagamentos...</p>
+              </div>
+            </div>
+
+          )
+
+          : pagamentosFiltrados.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-2">
+              <Icon name="receipt_long" className="text-4xl" />
+              <p className="text-sm font-medium">Nenhum pagamento encontrado.</p>
+            </div>
+
+          )
+
+            :
+            (
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left">
+                  <thead>
+                    <tr className="bg-slate-100 border-b border-slate-200">
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Cliente</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Mês Ref.</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Valor</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Vencimento</th>
+                      <th className="px-6 py-4 text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Status</th>
+                      <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wider text-slate-600 whitespace-nowrap">Ações</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-200">
+                    {pagamentosPagina.map((pag) => (
+                      <tr key={pag.id} className="hover:bg-slate-50 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <ClientAvatar iniciais={pag.iniciais} />
+                            <div>
+                              <p className="text-sm font-bold text-slate-900">{pag.cliente}</p>
+                              <p className="text-xs text-slate-500">{pag.descricaoAtendimento}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm font-medium text-slate-900">{pag.mesRef}</td>
+                        <td className="px-6 py-4 text-sm font-bold text-slate-900">{pag.valor}</td>
+                        <td className="px-6 py-4 text-sm text-slate-600">{pag.vencimento}</td>
+                        <td className="px-6 py-4"><StatusBadge status={pag.status} /></td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {pag.status === 'pendente' && (
+                              <button
+                                onClick={() => handleMarcarPago(pag.id)}
+                                className="text-blue-600 hover:underline text-xs font-bold px-3 py-1 rounded-lg bg-blue-50"
+                              >
+                                Marcar Pago
+                              </button>
+                            )}
+                            {pag.status === 'atrasado' && (
+                              <button
+                                onClick={() => handleCobraNoWhatsApp(pag)}
+                                className="text-red-600 hover:underline text-xs font-bold px-3 py-1 rounded-lg border border-red-200"
+                              >
+                                Cobrar no WhatsApp
+                              </button>
+                            )}
+                            <button
+                              onClick={() => handleEditarPagamento(pag)}
+                              className="text-slate-500 hover:text-blue-600 transition-colors"
+                              title="Editar pagamento"
+                            >
+                              <Icon name="edit" className="text-lg" />
+                            </button>
+                            {/* ✅ BOTÃO DELETAR ATUALIZADO */}
+                            <button
+                              onClick={() => handleDeletar(pag)}
+                              className="text-slate-500 hover:text-red-600 transition-colors"
+                              title="Deletar pagamento"
+                            >
+                              <Icon name="delete" className="text-lg" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+            )
+
+        }
 
         {/* ===== PAGINAÇÃO ===== */}
         {pagamentosFiltrados.length > 0 && (
@@ -472,8 +495,8 @@ export function PagamentosPage() {
                   key={num}
                   onClick={() => setPaginaAtual(num)}
                   className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${paginaAtual === num
-                      ? 'bg-blue-600 text-white'
-                      : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
                     }`}
                 >
                   {num}

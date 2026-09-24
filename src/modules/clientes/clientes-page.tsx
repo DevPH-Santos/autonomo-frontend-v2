@@ -32,7 +32,7 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
   const [modalVisualizarAberto, setModalVisualizarAberto] = useState(false)
   const [clienteSelecionado, setClienteSelecionado] = useState<ClienteExibicao | null>(null)
 
-  const itensPorPagina = 5
+  const itensPorPagina = 10
 
   // Carrega clientes ao montar o componente
   useEffect(() => {

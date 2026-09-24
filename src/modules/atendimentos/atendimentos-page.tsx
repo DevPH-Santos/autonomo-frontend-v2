@@ -245,6 +245,8 @@ export function AtendimentosPage() {
   const [erro, setErro] = useState<string | null>(null)
   const [statusFiltro, setStatusFiltro] = useState('todos')
   const [clienteFiltro, setClienteFiltro] = useState('todos')
+  const [paginaAtual, setPaginaAtual] = useState(1)
+  const itensPorPagina = 10
 
   const carregarAtendimentos = useCallback(async (forcarAtualizacao = false) => {
     try {
@@ -272,6 +274,10 @@ export function AtendimentosPage() {
     })
   }, [atendimentos, statusFiltro, clienteFiltro])
 
+  useEffect(() => {
+    setPaginaAtual(1)
+  }, [atendimentosFiltrados])
+
   const clienteOptions = useMemo<FilterOption[]>(() => {
     const clientes = [...new Set(atendimentos.map((item) => item.client))].sort()
     return [
@@ -279,6 +285,15 @@ export function AtendimentosPage() {
       ...clientes.map((cliente) => ({ value: cliente, label: cliente })),
     ]
   }, [atendimentos])
+
+  const totalPaginas = Math.ceil(atendimentosFiltrados.length / itensPorPagina)
+
+  const indiceInicial = (paginaAtual - 1) * itensPorPagina
+
+  const atendimentosPaginados = atendimentosFiltrados.slice(
+    indiceInicial,
+    indiceInicial + itensPorPagina
+  )
 
   const statusOptions: FilterOption[] = [
     { value: 'todos', label: 'Todos os Status' },
@@ -451,7 +466,7 @@ export function AtendimentosPage() {
                     </td>
                   </tr>
                 ) : (
-                  atendimentosFiltrados.map((item) => (
+                  atendimentosPaginados.map((item) => (
                     <tr
                       key={item.id}
                       className="border-b border-slate-200 hover:bg-slate-50 transition-colors"
@@ -502,12 +517,62 @@ export function AtendimentosPage() {
               </tbody>
             </table>
           </div>
+
+          {/* ===== PAGINAÇÃO ===== */}
+          {atendimentosFiltrados.length > 0 && (
+            <div className="px-6 py-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50">
+              <p className="text-xs font-medium text-slate-600">
+                Mostrando{' '}
+                <span className="font-semibold">
+                  {Math.min(itensPorPagina, atendimentosPaginados.length)}
+                </span>{' '}
+                de{' '}
+                <span className="font-semibold">{atendimentosFiltrados.length}</span>{' '}
+                resultados
+              </p>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPaginaAtual(Math.max(1, paginaAtual - 1))}
+                  disabled={paginaAtual === 1}
+                  className="w-8 h-8 flex items-center justify-center rounded text-xs font-medium text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Página anterior"
+                >
+                  <Icon name="chevron_left" />
+                </button>
+
+                {Array.from({ length: totalPaginas }, (_, i) => i + 1).map(
+                  (pagina) => (
+                    <button
+                      key={pagina}
+                      onClick={() => setPaginaAtual(pagina)}
+                      className={`w-8 h-8 flex items-center justify-center rounded text-xs font-semibold transition-colors ${pagina === paginaAtual
+                        ? 'bg-blue-100 text-blue-700 pointer-events-none'
+                        : 'text-slate-600 hover:bg-white'
+                        }`}
+                    >
+                      {pagina}
+                    </button>
+                  )
+                )}
+
+                <button
+                  onClick={() =>
+                    setPaginaAtual(Math.min(totalPaginas, paginaAtual + 1))
+                  }
+                  disabled={paginaAtual === totalPaginas}
+                  className="w-8 h-8 flex items-center justify-center rounded text-xs font-medium text-slate-600 hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  title="Próxima página"
+                >
+                  <Icon name="chevron_right" />
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <p className="text-sm text-slate-600">
-            Exibindo <span className="font-bold text-slate-900">{atendimentosFiltrados.length}</span> atendimento{atendimentosFiltrados.length !== 1 ? 's' : ''}
-            para o período selecionado.
+            Total de <span className="font-bold text-slate-900">{atendimentosFiltrados.length}</span> atendimento{atendimentosFiltrados.length !== 1 ? 's' : ''}
           </p>
           <div className="flex items-center gap-4">
             <button className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">
