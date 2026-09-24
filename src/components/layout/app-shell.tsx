@@ -342,7 +342,7 @@ export function AppShell({
               unreadCount={unreadCount}
               onMarkAsRead={handleMarkAllAsRead}
               onViewAll={() => {
-                router.push('/notificacoes');
+                router.push('/lembretes');
                 setNotificacoesAberto(false);
               }}
             >
