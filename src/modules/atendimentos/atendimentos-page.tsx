@@ -3,6 +3,7 @@
 import { Icon, type IconName } from '@/components/ui/icon'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { AtendimentoModal } from '@/components/ui/AtendimentoModal'
+import { ExportarModal } from '@/components/ui/ExportarModal'
 import {
   atualizarAtendimento,
   deletarAtendimento,
@@ -11,6 +12,7 @@ import {
   type StatusAtendimento,
 } from '@/services/atendimentoService'
 import { formatarValor } from '@/services/formatters'
+import * as XLSX from 'xlsx'
 
 interface AtendimentoExibicao {
   id: string
@@ -32,7 +34,12 @@ interface FilterOption {
   label: string
 }
 
-const STATUS_OPTIONS: StatusAtendimento[] = ['Agendado', 'Em Andamento', 'Pendente', 'Realizado']
+const STATUS_OPTIONS: StatusAtendimento[] = [
+  'Agendado',
+  'Em Andamento',
+  'Pendente',
+  'Realizado',
+]
 
 function normalizarStatus(status: string): StatusAtendimento {
   return STATUS_OPTIONS.includes(status as StatusAtendimento)
@@ -42,14 +49,25 @@ function normalizarStatus(status: string): StatusAtendimento {
 
 function parseDataAtendimento(valor: string) {
   const texto = String(valor || '')
-  const match = texto.match(/^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/)
+
+  const match = texto.match(
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T\s](\d{2}):(\d{2}))?/
+  )
 
   if (match) {
     const [, ano, mes, dia, hora = '0', minuto = '0'] = match
-    return new Date(Number(ano), Number(mes) - 1, Number(dia), Number(hora), Number(minuto))
+
+    return new Date(
+      Number(ano),
+      Number(mes) - 1,
+      Number(dia),
+      Number(hora),
+      Number(minuto)
+    )
   }
 
   const data = new Date(texto)
+
   return Number.isNaN(data.getTime()) ? null : data
 }
 
@@ -63,23 +81,29 @@ function mesmaData(a: Date, b: Date) {
 
 function formatarDataLabel(valor: string) {
   const data = parseDataAtendimento(valor)
+
   if (!data) return 'Sem data'
 
   const hoje = new Date()
+
   const ontem = new Date()
   ontem.setDate(hoje.getDate() - 1)
 
   if (mesmaData(data, hoje)) return 'Hoje'
+
   if (mesmaData(data, ontem)) return 'Ontem'
 
-  return data.toLocaleDateString('pt-BR', {
-    day: '2-digit',
-    month: 'short',
-  }).replace('.', '')
+  return data
+    .toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'short',
+    })
+    .replace('.', '')
 }
 
 function formatarHora(valor: string) {
   const data = parseDataAtendimento(valor)
+
   if (!data) return '--:--'
 
   return data.toLocaleTimeString('pt-BR', {
@@ -89,24 +113,40 @@ function formatarHora(valor: string) {
 }
 
 function obterIniciais(nome: string) {
-  return nome
-    .split(' ')
-    .filter(Boolean)
-    .map((parte) => parte[0])
-    .join('')
-    .toUpperCase()
-    .slice(0, 2) || 'CL'
+  return (
+    nome
+      .split(' ')
+      .filter(Boolean)
+      .map((parte) => parte[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2) || 'CL'
+  )
 }
 
-function obterAvatarVariant(id: string): AtendimentoExibicao['avatarVariant'] {
-  const variantes: AtendimentoExibicao['avatarVariant'][] = ['primary', 'secondary', 'tertiary']
+function obterAvatarVariant(
+  id: string
+): AtendimentoExibicao['avatarVariant'] {
+  const variantes: AtendimentoExibicao['avatarVariant'][] = [
+    'primary',
+    'secondary',
+    'tertiary',
+  ]
+
   const numero = Number(id)
-  return variantes[Number.isNaN(numero) ? 0 : numero % variantes.length]
+
+  return variantes[
+    Number.isNaN(numero) ? 0 : numero % variantes.length
+  ]
 }
 
-function mapearAtendimento(item: Atendimento): AtendimentoExibicao {
+function mapearAtendimento(
+  item: Atendimento
+): AtendimentoExibicao {
   const id = String(item.ID_atendimento)
-  const nomeCliente = item.nome_cliente || 'Cliente não informado'
+
+  const nomeCliente =
+    item.nome_cliente || 'Cliente não informado'
 
   return {
     id,
@@ -117,24 +157,39 @@ function mapearAtendimento(item: Atendimento): AtendimentoExibicao {
     initials: obterIniciais(nomeCliente),
     avatarVariant: obterAvatarVariant(id),
     phone: item.telefone_cliente || 'Sem telefone',
-    value: `R$ ${formatarValor(item.total_atendimento || 0)}`,
+    value: `R$ ${formatarValor(item.total_atendimento || 0)} `,
     status: normalizarStatus(item.status_atendimento),
     descricao: item.descri_atendimento || '',
-    quantidadeProdutos: Number(item.quantidade_produtos || 0),
+    quantidadeProdutos: Number(
+      item.quantidade_produtos || 0
+    ),
   }
 }
 
-function StatusBadge({ status }: { status: StatusAtendimento }) {
-  const baseClass = 'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border'
+function StatusBadge({
+  status,
+}: {
+  status: StatusAtendimento
+}) {
+  const baseClass =
+    'inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border'
+
   const estilos: Record<StatusAtendimento, string> = {
-    Realizado: 'bg-emerald-50 text-emerald-700 border-emerald-300 [&>span]:bg-emerald-500',
-    Pendente: 'bg-slate-100 text-slate-700 border-slate-200 [&>span]:bg-slate-400',
-    Agendado: 'bg-sky-50 text-sky-700 border-sky-200 [&>span]:bg-sky-500',
-    'Em Andamento': 'bg-amber-50 text-amber-700 border-amber-200 [&>span]:bg-amber-500',
+    Realizado:
+      'bg-emerald-50 text-emerald-700 border-emerald-300 [&>span]:bg-emerald-500',
+
+    Pendente:
+      'bg-slate-100 text-slate-700 border-slate-200 [&>span]:bg-slate-400',
+
+    Agendado:
+      'bg-sky-50 text-sky-700 border-sky-200 [&>span]:bg-sky-500',
+
+    'Em Andamento':
+      'bg-amber-50 text-amber-700 border-amber-200 [&>span]:bg-amber-500',
   }
 
   return (
-    <span className={`${baseClass} ${estilos[status]}`}>
+    <span className={`${baseClass} ${estilos[status]} `}>
       <span className="w-1.5 h-1.5 rounded-full" />
       {status}
     </span>
@@ -148,7 +203,8 @@ function ClientAvatar({
   initials: string
   variant: 'primary' | 'secondary' | 'tertiary'
 }) {
-  const baseClass = 'w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0'
+  const baseClass =
+    'w-9 h-9 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0'
 
   const variantClasses = {
     primary: 'bg-sky-100 text-sky-700',
@@ -156,13 +212,19 @@ function ClientAvatar({
     tertiary: 'bg-purple-100 text-purple-700',
   }
 
-  return <div className={`${baseClass} ${variantClasses[variant]}`}>{initials}</div>
+  return (
+    <div
+      className={`${baseClass} ${variantClasses[variant]} `}
+    >
+      {initials}
+    </div>
+  )
 }
 
 function ActionButtons({
   status,
   onEditar,
-  onMarcarRealizado
+  onMarcarRealizado,
 }: {
   status: StatusAtendimento
   onEditar: () => void
@@ -180,12 +242,15 @@ function ActionButtons({
           onMarcarRealizado()
         }}
         disabled={isRealizado}
-        className={`p-2 rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isRealizado
+        className={`p - 2 rounded - lg transition - colors disabled: opacity - 40 disabled: cursor - not - allowed ${isRealizado
           ? 'text-slate-500 hover:bg-slate-100'
           : 'text-emerald-600 hover:bg-emerald-50'
-          }`}
+          } `}
       >
-        <Icon name="check_circle" className="text-lg" />
+        <Icon
+          name="check_circle"
+          className="text-lg"
+        />
       </button>
 
       <button
@@ -221,16 +286,27 @@ function FilterSelect({
         className="appearance-none bg-white border border-slate-200 rounded-lg px-3 py-2 pr-8 text-sm font-medium text-slate-600 cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500/20"
       >
         {options.map((opt) => (
-          <option key={opt.value} value={opt.value}>{opt.label}</option>
+          <option
+            key={opt.value}
+            value={opt.value}
+          >
+            {opt.label}
+          </option>
         ))}
       </select>
-      <Icon name={icon} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+
+      <Icon
+        name={icon}
+        className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
+      />
     </div>
   )
 }
 
 export function AtendimentosPage() {
-  const [activeView, setActiveView] = useState<'dia' | 'semana'>('dia')
+  const [activeView, setActiveView] =
+    useState<'dia' | 'semana'>('dia')
+
   const [currentDate] = useState(() =>
     new Date().toLocaleDateString('pt-BR', {
       day: '2-digit',
@@ -238,121 +314,660 @@ export function AtendimentosPage() {
       year: 'numeric',
     })
   )
-  const [modalAberto, setModalAberto] = useState(false)
-  const [atendimentoSelecionadoId, setAtendimentoSelecionadoId] = useState<string | null>(null)
-  const [atendimentos, setAtendimentos] = useState<AtendimentoExibicao[]>([])
-  const [carregando, setCarregando] = useState(true)
-  const [erro, setErro] = useState<string | null>(null)
-  const [statusFiltro, setStatusFiltro] = useState('todos')
-  const [clienteFiltro, setClienteFiltro] = useState('todos')
-  const [paginaAtual, setPaginaAtual] = useState(1)
+
+  const [modalAberto, setModalAberto] =
+    useState(false)
+
+  const [
+    atendimentoSelecionadoId,
+    setAtendimentoSelecionadoId,
+  ] = useState<string | null>(null)
+
+  const [modalExportarAberto, setModalExportarAberto] =
+    useState(false)
+
+  const [atendimentos, setAtendimentos] =
+    useState<AtendimentoExibicao[]>([])
+
+  const [carregando, setCarregando] =
+    useState(true)
+
+  const [erro, setErro] =
+    useState<string | null>(null)
+
+  const [statusFiltro, setStatusFiltro] =
+    useState('todos')
+
+  const [clienteFiltro, setClienteFiltro] =
+    useState('todos')
+
+  const [paginaAtual, setPaginaAtual] =
+    useState(1)
+
   const itensPorPagina = 10
 
-  const carregarAtendimentos = useCallback(async (forcarAtualizacao = false) => {
-    try {
-      setCarregando(true)
-      setErro(null)
-      const response = await listarAtendimentos(forcarAtualizacao)
-      setAtendimentos(response.atendimentos.map(mapearAtendimento))
-    } catch (error) {
-      console.error('Erro ao listar atendimentos:', error)
-      setErro(error instanceof Error ? error.message : 'Erro ao listar atendimentos.')
-    } finally {
-      setCarregando(false)
-    }
-  }, [])
+  // ============================================
+  // CARREGAR ATENDIMENTOS
+  // ============================================
+
+  const carregarAtendimentos = useCallback(
+    async (forcarAtualizacao = false) => {
+      try {
+        setCarregando(true)
+        setErro(null)
+
+        const response =
+          await listarAtendimentos(
+            forcarAtualizacao
+          )
+
+        setAtendimentos(
+          response.atendimentos.map(
+            mapearAtendimento
+          )
+        )
+      } catch (error) {
+        console.error(
+          'Erro ao listar atendimentos:',
+          error
+        )
+
+        setErro(
+          error instanceof Error
+            ? error.message
+            : 'Erro ao listar atendimentos.'
+        )
+      } finally {
+        setCarregando(false)
+      }
+    },
+    []
+  )
 
   useEffect(() => {
     carregarAtendimentos()
   }, [carregarAtendimentos])
 
+  // ============================================
+  // FILTROS
+  // ============================================
+
   const atendimentosFiltrados = useMemo(() => {
     return atendimentos.filter((atendimento) => {
-      const correspondeStatus = statusFiltro === 'todos' || atendimento.status === statusFiltro
-      const correspondeCliente = clienteFiltro === 'todos' || atendimento.client === clienteFiltro
-      return correspondeStatus && correspondeCliente
+      const correspondeStatus =
+        statusFiltro === 'todos' ||
+        atendimento.status === statusFiltro
+
+      const correspondeCliente =
+        clienteFiltro === 'todos' ||
+        atendimento.client === clienteFiltro
+
+      return (
+        correspondeStatus &&
+        correspondeCliente
+      )
     })
-  }, [atendimentos, statusFiltro, clienteFiltro])
+  }, [
+    atendimentos,
+    statusFiltro,
+    clienteFiltro,
+  ])
 
   useEffect(() => {
     setPaginaAtual(1)
   }, [atendimentosFiltrados])
 
-  const clienteOptions = useMemo<FilterOption[]>(() => {
-    const clientes = [...new Set(atendimentos.map((item) => item.client))].sort()
-    return [
-      { value: 'todos', label: 'Todos os Clientes' },
-      ...clientes.map((cliente) => ({ value: cliente, label: cliente })),
-    ]
-  }, [atendimentos])
+  const clienteOptions = useMemo<FilterOption[]>(
+    () => {
+      const clientes = [
+        ...new Set(
+          atendimentos.map(
+            (item) => item.client
+          )
+        ),
+      ].sort()
 
-  const totalPaginas = Math.ceil(atendimentosFiltrados.length / itensPorPagina)
-
-  const indiceInicial = (paginaAtual - 1) * itensPorPagina
-
-  const atendimentosPaginados = atendimentosFiltrados.slice(
-    indiceInicial,
-    indiceInicial + itensPorPagina
+      return [
+        {
+          value: 'todos',
+          label: 'Todos os Clientes',
+        },
+        ...clientes.map((cliente) => ({
+          value: cliente,
+          label: cliente,
+        })),
+      ]
+    },
+    [atendimentos]
   )
 
+  const totalPaginas = Math.ceil(
+    atendimentosFiltrados.length /
+    itensPorPagina
+  )
+
+  const indiceInicial =
+    (paginaAtual - 1) * itensPorPagina
+
+  const atendimentosPaginados =
+    atendimentosFiltrados.slice(
+      indiceInicial,
+      indiceInicial + itensPorPagina
+    )
+
   const statusOptions: FilterOption[] = [
-    { value: 'todos', label: 'Todos os Status' },
-    ...STATUS_OPTIONS.map((status) => ({ value: status, label: status })),
+    {
+      value: 'todos',
+      label: 'Todos os Status',
+    },
+    ...STATUS_OPTIONS.map((status) => ({
+      value: status,
+      label: status,
+    })),
   ]
+
+  // ============================================
+  // ATENDIMENTOS
+  // ============================================
 
   function handleAtendimentoSalvo() {
     carregarAtendimentos(true)
   }
 
-  async function handleMarcarRealizado(atendimento: AtendimentoExibicao) {
-    if (atendimento.status === 'Realizado') return
+  async function handleMarcarRealizado(
+    atendimento: AtendimentoExibicao
+  ) {
+    if (atendimento.status === 'Realizado') {
+      return
+    }
 
     try {
       setErro(null)
-      await atualizarAtendimento(atendimento.id, { status_atendimento: 'Realizado' })
+
+      await atualizarAtendimento(
+        atendimento.id,
+        {
+          status_atendimento: 'Realizado',
+        }
+      )
+
       await carregarAtendimentos(true)
     } catch (error) {
-      console.error('Erro ao atualizar atendimento:', error)
-      setErro(error instanceof Error ? error.message : 'Erro ao atualizar atendimento.')
+      console.error(
+        'Erro ao atualizar atendimento:',
+        error
+      )
+
+      setErro(
+        error instanceof Error
+          ? error.message
+          : 'Erro ao atualizar atendimento.'
+      )
     }
   }
 
-  async function handleExcluir(atendimento: AtendimentoExibicao) {
-    const confirmar = window.confirm(`Excluir atendimento de ${atendimento.client}?`)
+  async function handleExcluir(
+    atendimento: AtendimentoExibicao
+  ) {
+    const confirmar = window.confirm(
+      `Excluir atendimento de ${atendimento.client}?`
+    )
+
     if (!confirmar) return
 
     try {
       setErro(null)
-      await deletarAtendimento(atendimento.id)
+
+      await deletarAtendimento(
+        atendimento.id
+      )
+
       await carregarAtendimentos(true)
     } catch (error) {
-      console.error('Erro ao excluir atendimento:', error)
-      setErro(error instanceof Error ? error.message : 'Erro ao excluir atendimento.')
+      console.error(
+        'Erro ao excluir atendimento:',
+        error
+      )
+
+      setErro(
+        error instanceof Error
+          ? error.message
+          : 'Erro ao excluir atendimento.'
+      )
     }
   }
+
+  // ============================================
+  // EXPORTAÇÃO
+  // ============================================
+
+  const prepararDadosExportacao = () => {
+    return atendimentosFiltrados.map(
+      (item) => ({
+        Data: item.dateLabel,
+        Hora: item.time,
+        Cliente: item.client,
+        Telefone: item.phone,
+        Descrição: item.descricao,
+        Produtos: item.quantidadeProdutos,
+        Valor: item.value,
+        Status: item.status,
+      })
+    )
+  }
+
+  const obterNomeArquivo = (
+    extensao: string
+  ) => {
+    const data = new Date()
+      .toISOString()
+      .split('T')[0]
+
+    return `atendimentos-${data}.${extensao}`  // ✅ Removido espaços
+  }
+
+  const exportarXLSX = () => {
+    const dados =
+      prepararDadosExportacao()
+
+    if (dados.length === 0) {
+      setErro(
+        'Não há atendimentos para exportar.'
+      )
+      return
+    }
+
+    const worksheet =
+      XLSX.utils.json_to_sheet(dados)
+
+    const workbook =
+      XLSX.utils.book_new()
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      'Atendimentos'
+    )
+
+    worksheet['!cols'] = [
+      { wch: 12 },
+      { wch: 8 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 35 },
+      { wch: 10 },
+      { wch: 15 },
+      { wch: 18 },
+    ]
+
+    XLSX.writeFile(
+      workbook,
+      obterNomeArquivo('xlsx')
+    )
+  }
+
+  const exportarXLS = () => {
+    const dados =
+      prepararDadosExportacao()
+
+    if (dados.length === 0) {
+      setErro(
+        'Não há atendimentos para exportar.'
+      )
+      return
+    }
+
+    const worksheet =
+      XLSX.utils.json_to_sheet(dados)
+
+    const workbook =
+      XLSX.utils.book_new()
+
+    XLSX.utils.book_append_sheet(
+      workbook,
+      worksheet,
+      'Atendimentos'
+    )
+
+    worksheet['!cols'] = [
+      { wch: 12 },
+      { wch: 8 },
+      { wch: 20 },
+      { wch: 15 },
+      { wch: 35 },
+      { wch: 10 },
+      { wch: 15 },
+      { wch: 18 },
+    ]
+
+    XLSX.writeFile(
+      workbook,
+      obterNomeArquivo('xls'),
+      {
+        bookType: 'biff8',
+      }
+    )
+  }
+
+  const exportarCSV = () => {
+    const dados =
+      prepararDadosExportacao()
+
+    if (dados.length === 0) {
+      setErro(
+        'Não há atendimentos para exportar.'
+      )
+      return
+    }
+
+    const worksheet =
+      XLSX.utils.json_to_sheet(dados)
+
+    const csv =
+      XLSX.utils.sheet_to_csv(
+        worksheet
+      )
+
+    const blob = new Blob(
+      [csv],
+      {
+        type: 'text/csv;charset=utf-8;',
+      }
+    )
+
+    const url =
+      URL.createObjectURL(blob)
+
+    const link =
+      document.createElement('a')
+
+    link.href = url
+    link.download =
+      obterNomeArquivo('csv')
+
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+
+    URL.revokeObjectURL(url)
+  }
+
+  const exportarPDF = async () => {
+    try {
+      const dados =
+        prepararDadosExportacao()
+
+      if (dados.length === 0) {
+        setErro(
+          'Não há atendimentos para exportar.'
+        )
+        return
+      }
+
+      const { jsPDF } =
+        await import('jspdf')
+
+      const { autoTable } =
+        await import('jspdf-autotable')
+
+      const doc = new jsPDF({
+        orientation: 'landscape',
+        unit: 'mm',
+        format: 'a4',
+      })
+
+      doc.setFontSize(16)
+      doc.text(
+        'Relatório de Atendimentos',
+        14,
+        15
+      )
+
+      doc.setFontSize(9)
+      doc.text(
+        `Gerado em ${new Date().toLocaleString(
+          'pt-BR'
+        )
+        } `,
+        14,
+        21
+      )
+
+      autoTable(doc, {
+        head: [
+          Object.keys(dados[0]),
+        ],
+        body: dados.map((item) =>
+          Object.values(item)
+        ),
+        startY: 27,
+        margin: {
+          top: 10,
+          right: 10,
+          bottom: 10,
+          left: 10,
+        },
+        styles: {
+          fontSize: 8,
+          cellPadding: 3,
+        },
+        headStyles: {
+          fillColor: [
+            59,
+            130,
+            246,
+          ],
+          textColor: [
+            255,
+            255,
+            255,
+          ],
+          fontStyle: 'bold',
+        },
+        alternateRowStyles: {
+          fillColor: [
+            248,
+            250,
+            252,
+          ],
+        },
+      })
+
+      doc.save(
+        obterNomeArquivo('pdf')
+      )
+    } catch (error) {
+      console.error(
+        'Erro ao exportar PDF:',
+        error
+      )
+
+      setErro(
+        'Erro ao exportar em PDF. Tente outro formato.'
+      )
+    }
+  }
+
+  const exportarPNG = async () => {
+    try {
+      const table = document.querySelector('table')
+
+      if (!table) {
+        setErro('Tabela não encontrada para exportação.')
+        return
+      }
+
+      // Clone e remove classes Tailwind
+      const tableClone = table.cloneNode(true) as HTMLElement
+      tableClone.querySelectorAll('[class]').forEach((el) => {
+        el.removeAttribute('class')
+      })
+
+      // Adiciona estilos inline básicos
+      tableClone.style.borderCollapse = 'collapse'
+      tableClone.style.width = '100%'
+      tableClone.style.fontFamily = 'Arial, sans-serif'
+      tableClone.style.fontSize = '12px'
+
+      tableClone.querySelectorAll('th').forEach((th) => {
+        const thElement = th as HTMLElement
+        thElement.style.backgroundColor = '#3b82f6'
+        thElement.style.color = '#ffffff'
+        thElement.style.padding = '12px'
+        thElement.style.textAlign = 'left'
+        thElement.style.border = '1px solid #e2e8f0'
+        thElement.style.fontWeight = 'bold'
+      })
+
+      tableClone.querySelectorAll('td').forEach((td) => {
+        const tdElement = td as HTMLElement
+        tdElement.style.padding = '12px'
+        tdElement.style.border = '1px solid #e2e8f0'
+      })
+
+      tableClone.querySelectorAll('tr:nth-child(even)').forEach((tr) => {
+        const trElement = tr as HTMLElement
+        trElement.style.backgroundColor = '#f8fafc'
+      })
+
+      // Container temporário
+      const tempContainer = document.createElement('div')
+      tempContainer.style.position = 'absolute'
+      tempContainer.style.left = '-9999px'
+      tempContainer.style.top = '-9999px'
+      tempContainer.style.backgroundColor = '#ffffff'
+      tempContainer.style.padding = '20px'
+      tempContainer.appendChild(tableClone)
+      document.body.appendChild(tempContainer)
+
+      const html2canvas = (await import('html2canvas')).default
+
+      const canvas = await html2canvas(tempContainer, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        logging: false,
+        allowTaint: true,
+      })
+
+      // Remove o container temporário
+      document.body.removeChild(tempContainer)
+
+      // Download
+      const link = document.createElement('a')
+      link.href = canvas.toDataURL('image/png')
+      link.download = obterNomeArquivo('png')
+      link.click()
+    } catch (error) {
+      console.error('Erro ao exportar PNG:', error)
+      setErro('Erro ao exportar como imagem. Tente outro formato.')
+    }
+  }
+
+  const handleExportar = async (
+    tipo: string
+  ) => {
+    try {
+      setErro(null)
+
+      switch (tipo) {
+        case 'xlsx':
+          exportarXLSX()
+          break
+
+        case 'xls':
+          exportarXLS()
+          break
+
+        case 'csv':
+          exportarCSV()
+          break
+
+        case 'pdf':
+          await exportarPDF()
+          break
+
+        case 'png':
+          await exportarPNG()
+          break
+
+        default:
+          setErro(
+            'Formato não suportado.'
+          )
+      }
+    } catch (error) {
+      console.error(
+        'Erro na exportação:',
+        error
+      )
+
+      setErro(
+        'Erro ao exportar dados.'
+      )
+    }
+  }
+
+  // ============================================
+  // JSX
+  // ============================================
 
   return (
     <>
       <AtendimentoModal
-        isOpen={modalAberto || Boolean(atendimentoSelecionadoId)}
-        atendimentoId={atendimentoSelecionadoId}
+        isOpen={
+          modalAberto ||
+          Boolean(
+            atendimentoSelecionadoId
+          )
+        }
+        atendimentoId={
+          atendimentoSelecionadoId
+        }
         onClose={() => {
           setModalAberto(false)
-          setAtendimentoSelecionadoId(null)
+          setAtendimentoSelecionadoId(
+            null
+          )
         }}
-        onAtualizado={handleAtendimentoSalvo}
-        onExcluido={handleAtendimentoSalvo}
+        onAtualizado={
+          handleAtendimentoSalvo
+        }
+        onExcluido={
+          handleAtendimentoSalvo
+        }
       />
+
+      <ExportarModal
+        isOpen={
+          modalExportarAberto
+        }
+        onClose={() =>
+          setModalExportarAberto(
+            false
+          )
+        }
+        onExportar={
+          handleExportar
+        }
+      />
+
       <div className="space-y-6">
         <section className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-black text-slate-900">Atendimentos</h1>
+            <h1 className="text-3xl sm:text-4xl font-black text-slate-900">
+              Atendimentos
+            </h1>
+
             <p className="text-sm sm:text-base text-slate-600 mt-1">
               Gerencie seus atendimentos da semana para ter uma agenda mais organizada.
             </p>
           </div>
+
           <button
-            onClick={() => setModalAberto(true)}
+            type="button"
+            onClick={() =>
+              setModalAberto(true)
+            }
             className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-5 rounded-lg transition-colors w-full sm:w-auto"
           >
             <Icon name="add" />
@@ -362,9 +977,15 @@ export function AtendimentosPage() {
 
         {erro && (
           <div className="p-4 rounded-lg bg-red-50 border border-red-200">
-            <p className="text-sm text-red-700 font-medium">{erro}</p>
+            <p className="text-sm text-red-700 font-medium">
+              {erro}
+            </p>
+
             <button
-              onClick={() => setErro(null)}
+              type="button"
+              onClick={() =>
+                setErro(null)
+              }
               className="text-xs text-red-600 hover:text-red-800 mt-2 underline"
             >
               Descartar
@@ -376,31 +997,50 @@ export function AtendimentosPage() {
           <div className="flex items-center gap-4">
             <div className="flex gap-1 bg-slate-200 p-1 rounded-lg">
               <button
-                onClick={() => setActiveView('dia')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeView === 'dia'
+                type="button"
+                onClick={() =>
+                  setActiveView('dia')
+                }
+                className={`px - 3 py - 1.5 rounded - lg text - sm font - semibold transition - all ${activeView === 'dia'
                   ? 'bg-white text-blue-600 shadow-sm'
                   : 'bg-transparent text-slate-600 hover:text-slate-900'
-                  }`}
+                  } `}
               >
                 Dia
               </button>
+
               <button
-                onClick={() => setActiveView('semana')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeView === 'semana'
+                type="button"
+                onClick={() =>
+                  setActiveView('semana')
+                }
+                className={`px - 3 py - 1.5 rounded - lg text - sm font - semibold transition - all ${activeView === 'semana'
                   ? 'bg-white text-blue-600 shadow-sm'
                   : 'bg-transparent text-slate-600 hover:text-slate-900'
-                  }`}
+                  } `}
               >
                 Semana
               </button>
             </div>
 
             <div className="flex items-center gap-2">
-              <button className="p-1.5 rounded-lg hover:bg-slate-300 transition-colors" aria-label="Dia anterior">
+              <button
+                type="button"
+                className="p-1.5 rounded-lg hover:bg-slate-300 transition-colors"
+                aria-label="Dia anterior"
+              >
                 <Icon name="chevron_left" />
               </button>
-              <span className="font-semibold text-slate-900 whitespace-nowrap text-sm capitalize">{currentDate}</span>
-              <button className="p-1.5 rounded-lg hover:bg-slate-300 transition-colors" aria-label="Próximo dia">
+
+              <span className="font-semibold text-slate-900 whitespace-nowrap text-sm capitalize">
+                {currentDate}
+              </span>
+
+              <button
+                type="button"
+                className="p-1.5 rounded-lg hover:bg-slate-300 transition-colors"
+                aria-label="Próximo dia"
+              >
                 <Icon name="chevron_right" />
               </button>
             </div>
@@ -408,16 +1048,29 @@ export function AtendimentosPage() {
 
           <div className="flex items-center gap-2 flex-wrap">
             <FilterSelect
-              options={statusOptions}
+              options={
+                statusOptions
+              }
               icon="filter_list"
-              value={statusFiltro}
-              onChange={setStatusFiltro}
+              value={
+                statusFiltro
+              }
+              onChange={
+                setStatusFiltro
+              }
             />
+
             <FilterSelect
-              options={clienteOptions}
+              options={
+                clienteOptions
+              }
               icon="person"
-              value={clienteFiltro}
-              onChange={setClienteFiltro}
+              value={
+                clienteFiltro
+              }
+              onChange={
+                setClienteFiltro
+              }
             />
           </div>
         </section>
@@ -430,89 +1083,153 @@ export function AtendimentosPage() {
                   <th className="px-6 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap">
                     Data / Hora
                   </th>
+
                   <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap">
                     Cliente
                   </th>
+
                   <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap hidden sm:table-cell">
                     Telefone
                   </th>
+
                   <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap hidden md:table-cell">
                     Valor
                   </th>
+
                   <th className="px-4 py-4 text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap">
                     Status
                   </th>
+
                   <th className="px-6 py-4 text-right text-xs font-bold uppercase tracking-wide text-slate-600 whitespace-nowrap">
                     Ações
                   </th>
                 </tr>
               </thead>
+
               <tbody>
                 {carregando ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center text-slate-500">
-                      Carregando atendimentos...
+                    <td
+                      colSpan={6}
+                      className="px-6 py-12 text-center text-slate-500"
+                    >
+                      Carregando
+                      atendimentos...
                     </td>
                   </tr>
-                ) : atendimentosFiltrados.length === 0 ? (
+                ) : atendimentosFiltrados.length ===
+                  0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-12 text-center">
+                    <td
+                      colSpan={6}
+                      className="px-6 py-12 text-center"
+                    >
                       <div className="flex flex-col items-center justify-center gap-3">
-                        <Icon name="search_off" className="text-5xl text-slate-300" />
+                        <Icon
+                          name="search_off"
+                          className="text-5xl text-slate-300"
+                        />
+
                         <p className="text-slate-500 font-medium">
-                          Nenhum atendimento encontrado
+                          Nenhum
+                          atendimento
+                          encontrado
                         </p>
                       </div>
                     </td>
                   </tr>
                 ) : (
-                  atendimentosPaginados.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="border-b border-slate-200 hover:bg-slate-50 transition-colors"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex flex-col">
-                          <span className="font-semibold text-slate-900 text-sm">{item.dateLabel}</span>
-                          <span className="text-xs text-slate-600 mt-0.5">{item.time}</span>
-                        </div>
-                      </td>
-
-                      <td className="px-4 py-4">
-                        <div className="flex items-center gap-3">
-                          <ClientAvatar initials={item.initials} variant={item.avatarVariant} />
+                  atendimentosPaginados.map(
+                    (item) => (
+                      <tr
+                        key={item.id}
+                        className="border-b border-slate-200 hover:bg-slate-50 transition-colors"
+                      >
+                        <td className="px-6 py-4">
                           <div className="flex flex-col">
-                            <span className="font-medium text-slate-900 text-sm">{item.client}</span>
-                            {item.quantidadeProdutos > 0 && (
-                              <span className="text-xs font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded w-fit mt-1">
-                                {item.quantidadeProdutos} PRODUTO{item.quantidadeProdutos !== 1 ? 'S' : ''}
-                              </span>
-                            )}
+                            <span className="font-semibold text-slate-900 text-sm">
+                              {
+                                item.dateLabel
+                              }
+                            </span>
+
+                            <span className="text-xs text-slate-600 mt-0.5">
+                              {item.time}
+                            </span>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      <td className="px-4 py-4 text-slate-600 text-sm hidden sm:table-cell">
-                        {item.phone}
-                      </td>
+                        <td className="px-4 py-4">
+                          <div className="flex items-center gap-3">
+                            <ClientAvatar
+                              initials={
+                                item.initials
+                              }
+                              variant={
+                                item.avatarVariant
+                              }
+                            />
 
-                      <td className="px-4 py-4 font-semibold text-slate-900 text-sm hidden md:table-cell">
-                        {item.value}
-                      </td>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-slate-900 text-sm">
+                                {
+                                  item.client
+                                }
+                              </span>
 
-                      <td className="px-4 py-4">
-                        <StatusBadge status={item.status} />
-                      </td>
+                              {item.quantidadeProdutos >
+                                0 && (
+                                  <span className="text-xs font-bold bg-purple-100 text-purple-700 px-2 py-0.5 rounded w-fit mt-1">
+                                    {
+                                      item.quantidadeProdutos
+                                    }{' '}
+                                    PRODUTO
+                                    {item.quantidadeProdutos !==
+                                      1
+                                      ? 'S'
+                                      : ''}
+                                  </span>
+                                )}
+                            </div>
+                          </div>
+                        </td>
 
-                      <td className="px-6 py-4 text-right">
-                        <ActionButtons
-                          status={item.status}
-                          onEditar={() => setAtendimentoSelecionadoId(item.id)}
-                          onMarcarRealizado={() => handleMarcarRealizado(item)}
-                        />
-                      </td>
-                    </tr>
-                  ))
+                        <td className="px-4 py-4 text-slate-600 text-sm hidden sm:table-cell">
+                          {item.phone}
+                        </td>
+
+                        <td className="px-4 py-4 font-semibold text-slate-900 text-sm hidden md:table-cell">
+                          {item.value}
+                        </td>
+
+                        <td className="px-4 py-4">
+                          <StatusBadge
+                            status={
+                              item.status
+                            }
+                          />
+                        </td>
+
+                        <td className="px-6 py-4 text-right">
+                          <ActionButtons
+                            status={
+                              item.status
+                            }
+                            onEditar={() =>
+                              setAtendimentoSelecionadoId(
+                                item.id
+                              )
+                            }
+                            onMarcarRealizado={() =>
+                              handleMarcarRealizado(
+                                item
+                              )
+                            }
+                          />
+                        </td>
+                      </tr>
+                    )
+                  )
                 )}
               </tbody>
             </table>
@@ -570,18 +1287,35 @@ export function AtendimentosPage() {
           )}
         </div>
 
+        {/* RODAPÉ / EXPORTAÇÃO */}
+
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <p className="text-sm text-slate-600">
-            Total de <span className="font-bold text-slate-900">{atendimentosFiltrados.length}</span> atendimento{atendimentosFiltrados.length !== 1 ? 's' : ''}
+            Total de{' '}
+            <span className="font-bold text-slate-900">
+              {
+                atendimentosFiltrados.length
+              }
+            </span>{' '}
+            atendimento
+            {atendimentosFiltrados.length !==
+              1
+              ? 's'
+              : ''}
           </p>
+
           <div className="flex items-center gap-4">
-            <button className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">
+            <button
+              type="button"
+              onClick={() =>
+                setModalExportarAberto(
+                  true
+                )
+              }
+              className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+            >
               <Icon name="download" />
               Exportar Relatório
-            </button>
-            <button className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors">
-              <Icon name="print" />
-              Imprimir Agenda
             </button>
           </div>
         </div>
