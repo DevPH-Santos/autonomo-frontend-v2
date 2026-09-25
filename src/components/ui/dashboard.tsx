@@ -92,7 +92,7 @@ export function ClientRankItem({
 
             {/* Receita */}
             <div className="flex flex-col items-end">
-                <span className="font-bold text-blue-600 text-sm">R${revenue}</span>
+                <span className="font-bold text-blue-600 text-sm">{revenue}</span>
                 <span className="text-xs text-gray-500 uppercase tracking-wider">
                     Receita
                 </span>

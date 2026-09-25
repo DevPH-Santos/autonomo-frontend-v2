@@ -1,4 +1,5 @@
-// src/utils/formatters.ts
+// Formatação sem símbolo para os campos de edição.
+// Para valores exibidos no sistema, use formatarMoeda em configuracoesService.
 
 export function formatarValor(valor: number | string): string {
     if (!valor) return '0,00'

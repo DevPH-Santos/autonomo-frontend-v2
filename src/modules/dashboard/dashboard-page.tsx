@@ -13,6 +13,7 @@ import { ReactNode, useState, useEffect } from "react";
 import { obterDashboardResumo } from "@/services/dashboardService";
 import type { DashboardResumo } from "@/types/dashboard";
 import { SkeletonCard, Skeleton } from "@/components/ui/skeleton";
+import { formatarMoeda } from '@/services/configuracoesService';
 
 export function DashboardPage(): ReactNode {
   const [periodSelected, setPeriodSelected] = useState<"dia" | "mes" | "ano">("mes");
@@ -57,19 +58,19 @@ export function DashboardPage(): ReactNode {
     {
       icon: "payments" as const,
       label: "RECEITA MENSAL",
-      value: resumo ? `R$ ${resumo.receitaMensal}` : "R$ 0,00",
+      value: resumo ? resumo.receitaMensal : formatarMoeda(0),
       trend: { icon: "trending_up" as const, percentage: 5 },
     },
     {
       icon: "account_balance_wallet" as const,
       label: "LUCRO MENSAL",
-      value: resumo ? `R$ ${resumo.lucroMensal}` : "R$ 0,00",
+      value: resumo ? resumo.lucroMensal : formatarMoeda(0),
       trend: { icon: "trending_flat" as const, percentage: 0 },
     },
     {
       icon: "pending_actions" as const,
       label: "TOTAL PARA RECEBER",
-      value: resumo ? `R$ ${resumo.totalParaReceber}` : "R$ 0,00",
+      value: resumo ? resumo.totalParaReceber : formatarMoeda(0),
     },
     {
       icon: "event" as const,

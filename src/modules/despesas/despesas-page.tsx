@@ -8,6 +8,7 @@ import {
   deletarDespesa as deletarDespesaService,
 } from '@/services/despesaService'
 import type { Despesa as DespesaAPI } from '@/services/despesaService'
+import { formatarMoeda } from '@/services/configuracoesService'
 
 // ==========================================
 // CONSTANTES
@@ -36,13 +37,6 @@ interface Despesa {
 // ==========================================
 // HELPERS
 // ==========================================
-
-function formatarValor(valor: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(valor)
-}
 
 function formatarData(dataISO: string): string {
   return new Date(dataISO).toLocaleDateString('pt-BR', {
@@ -76,7 +70,7 @@ function mapearParaLocal(d: DespesaAPI): Despesa {
     descricao: d.descricao,
     observacao: d.observacao ?? null,
     categoria: mapearCategoria(d.categoria),
-    valor: formatarValor(d.valor),
+    valor: formatarMoeda(d.valor),
     valorNumerico: d.valor,
     data: formatarData(d.data),
     dataBruta: d.data,
@@ -264,7 +258,7 @@ export function DespesasPage() {
             </div>
           </div>
           <p className="text-sm font-semibold text-slate-600 mb-1">Total gasto no mês</p>
-          <h3 className="text-2xl font-black text-slate-900">{formatarValor(totalMesAtual)}</h3>
+          <h3 className="text-2xl font-black text-slate-900">{formatarMoeda(totalMesAtual)}</h3>
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:bg-sky-50/30 transition-colors">
@@ -277,7 +271,7 @@ export function DespesasPage() {
           <div className="flex items-baseline gap-2">
             <h3 className="text-2xl font-black text-slate-900">{maiorCategoriaNome}</h3>
             <span className="text-sm font-medium text-slate-400">
-              {formatarValor(maiorCategoriaValor)}
+              {formatarMoeda(maiorCategoriaValor)}
             </span>
           </div>
         </div>

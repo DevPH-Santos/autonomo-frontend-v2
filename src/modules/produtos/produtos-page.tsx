@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react'
 import { ProdutoModal } from '@/components/ui/ProdutoModal'
 import { listarProdutos } from '@/services/produtoService'
 import type { Produto } from '@/types/produto'
-import { formatarValor } from '@/services/formatters'
+import { formatarMoeda } from '@/services/configuracoesService'
 
 export function ProdutosPage() {
   const [produtos, setProdutos] = useState<Produto[]>([])
@@ -48,11 +48,11 @@ export function ProdutosPage() {
 
   const custoMedio =
     totalProdutos > 0
-      ? (
+      ? formatarMoeda(
         produtos.reduce((acc, p) => acc + Number(p.valor_produto || 0), 0) /
         totalProdutos
-      ).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
-      : 'R$ 0,00'
+      )
+      : formatarMoeda(0)
 
   const status = totalProdutos > 0 ? 'Ativo' : 'Vazio'
 
@@ -164,7 +164,7 @@ export function ProdutosPage() {
                         {produto.nome_produto}
                       </td>
                       <td className="px-6 py-4 text-slate-700">
-                        R$ {formatarValor(produto.valor_produto)}
+                        {formatarMoeda(produto.valor_produto)}
                       </td>
                       <td className="px-6 py-4 text-slate-700">
                         {produto.quantidade_produto} {produto.unidade_medida}

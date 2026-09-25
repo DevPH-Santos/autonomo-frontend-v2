@@ -12,7 +12,7 @@ import {
   type StatusAtendimento,
 } from '@/services/atendimentoService'
 import { exportacao } from '@/services/exportacaoService'
-import { formatarValor } from '@/services/formatters'
+import { formatarMoeda } from '@/services/configuracoesService'
 
 interface AtendimentoExibicao {
   id: string
@@ -140,7 +140,7 @@ function mapearAtendimento(
     initials: obterIniciais(nomeCliente),
     avatarVariant: obterAvatarVariant(id),
     phone: item.telefone_cliente || 'Sem telefone',
-    value: `R$ ${formatarValor(item.total_atendimento || 0)} `,
+    value: formatarMoeda(item.total_atendimento || 0),
     status: normalizarStatus(item.status_atendimento),
     descricao: item.descri_atendimento || '',
     quantidadeProdutos: Number(

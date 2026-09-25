@@ -3,7 +3,7 @@ import { listarAtendimentos } from "./atendimentoService";
 import { listarClientes } from "./clienteService";
 import { listarDespesas } from "./despesaService";
 import { listarPagamentos } from "./pagamentoService";
-import { formatarValor } from "./formatters";
+import { formatarMoeda } from './configuracoesService';
 import type { DashboardResumo, GraficoData } from "@/types/dashboard";
 import type { Pagamento } from "@/types/pagamento";
 
@@ -160,7 +160,7 @@ export async function obterDashboardResumo(
                 position: index + 1,
                 name: cliente.nome_cliente,
                 service: cliente.tipo_contratacao_cliente || "Serviço residencial",
-                revenue: cliente.valor_visita_cliente ? formatarValor(cliente.valor_visita_cliente) : "0,00",
+                revenue: formatarMoeda(cliente.valor_visita_cliente || 0),
             }));
 
         // Rotas do dia
@@ -178,9 +178,9 @@ export async function obterDashboardResumo(
         });
 
         return {
-            receitaMensal: formatarValor(totalReceita),
-            lucroMensal: formatarValor(lucroCalculado),
-            totalParaReceber: formatarValor(totalPendente),
+            receitaMensal: formatarMoeda(totalReceita),
+            lucroMensal: formatarMoeda(lucroCalculado),
+            totalParaReceber: formatarMoeda(totalPendente),
             totalAtendimentos: String(atendimentos.length),
             clientesPendentes: pagamentos.filter(p => p.status === "Pendente" || p.status === "Atrasado").length,
             topClientes: topClientes.length > 0 ? topClientes : [

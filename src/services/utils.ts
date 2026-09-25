@@ -1,8 +1,7 @@
+import { formatarMoeda } from './configuracoesService';
+
 export function formatCurrency(value: number) {
-  return new Intl.NumberFormat("pt-BR", {
-    style: "currency",
-    currency: "BRL",
-  }).format(value);
+  return formatarMoeda(value);
 }
 
 export function formatDate(value: string | Date) {

@@ -10,6 +10,7 @@ import {
   atualizarStatusPagamento,
 } from '@/services/pagamentoService'
 import type { Pagamento as PagamentoAPI } from '@/services/pagamentoService'
+import { formatarMoeda } from '@/services/configuracoesService'
 
 // ==========================================
 // CONSTANTES
@@ -63,13 +64,6 @@ function formatarMesRef(dataISO: string): string {
   return str.charAt(0).toUpperCase() + str.slice(1)
 }
 
-function formatarValor(valor: number): string {
-  return new Intl.NumberFormat('pt-BR', {
-    style: 'currency',
-    currency: 'BRL',
-  }).format(valor)
-}
-
 function mapearStatus(status: string): 'pago' | 'pendente' | 'atrasado' {
   const mapa: Record<string, 'pago' | 'pendente' | 'atrasado'> = {
     Pago: 'pago',
@@ -92,7 +86,7 @@ function mapearParaLocal(pag: PagamentoAPI): Pagamento {
     telefoneCliente,
     descricaoAtendimento,
     mesRef: formatarMesRef(pag.data),
-    valor: formatarValor(pag.valor),
+    valor: formatarMoeda(pag.valor),
     valorNumerico: pag.valor,
     vencimento: formatarData(pag.data),
     status: mapearStatus(pag.status),
@@ -291,7 +285,7 @@ export function PagamentosPage() {
             </div>
           </div>
           <p className="text-sm font-semibold text-slate-600 mb-1">Total recebido</p>
-          <h3 className="text-2xl font-black text-slate-900">{formatarValor(totalRecebido)}</h3>
+          <h3 className="text-2xl font-black text-slate-900">{formatarMoeda(totalRecebido)}</h3>
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:bg-blue-50/30 transition-colors">
@@ -304,7 +298,7 @@ export function PagamentosPage() {
             </span>
           </div>
           <p className="text-sm font-semibold text-slate-600 mb-1">Total a receber no mês</p>
-          <h3 className="text-2xl font-black text-slate-900">{formatarValor(totalAReceber)}</h3>
+          <h3 className="text-2xl font-black text-slate-900">{formatarMoeda(totalAReceber)}</h3>
         </div>
 
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 hover:bg-red-50/30 transition-colors">
@@ -320,7 +314,7 @@ export function PagamentosPage() {
           </div>
           <p className="text-sm font-semibold text-slate-600 mb-1">Total em atraso</p>
           <h3 className={`text-2xl font-black ${totalAtrasado > 0 ? 'text-red-600' : 'text-slate-900'}`}>
-            {formatarValor(totalAtrasado)}
+            {formatarMoeda(totalAtrasado)}
           </h3>
         </div>
       </section>

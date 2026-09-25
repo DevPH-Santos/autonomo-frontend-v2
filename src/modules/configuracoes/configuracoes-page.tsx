@@ -1,8 +1,18 @@
 'use client';
 
 import { type FormEvent, type ReactNode, useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Icon, type IconName } from '@/components/ui/icon';
-import { obterUsuarioLogado } from '@/services/authService';
+import { logout, obterUsuarioLogado } from '@/services/authService';
+import {
+  exportarDadosLocais,
+  MOEDAS_SUPORTADAS,
+  obterConfiguracoes,
+  salvarConfiguracoes,
+  salvarMoedaComCotacao,
+  type CodigoMoeda,
+  type PreferenciasLembretes,
+} from '@/services/configuracoesService';
 
 type Aba = 'perfil' | 'negocio' | 'lembretes' | 'conta';
 type ModalAberto = 'foto' | 'senha' | 'excluir' | null;
@@ -35,10 +45,20 @@ function obterIniciais(nome: string) {
 }
 
 export function ConfiguracoesPage() {
+  const router = useRouter();
   const [abaAtiva, setAbaAtiva] = useState<Aba>('perfil');
   const [modalAberto, setModalAberto] = useState<ModalAberto>(null);
   const [toast, setToast] = useState<string | null>(null);
+  const [salvandoMoeda, setSalvandoMoeda] = useState(false);
   const [notificacoesAtivas, setNotificacoesAtivas] = useState(true);
+  const [moeda, setMoeda] = useState<CodigoMoeda>('BRL');
+  const [preferenciasLembretes, setPreferenciasLembretes] =
+    useState<PreferenciasLembretes>({
+      ativo: true,
+      pagamentos: '1',
+      atendimentos: '1',
+      lembretes: '1',
+    });
   const [perfil, setPerfil] = useState<DadosPerfil>({
     nome: 'Pedro Santos',
     email: 'pedro@email.com',
@@ -47,20 +67,26 @@ export function ConfiguracoesPage() {
   const [perfilOriginal, setPerfilOriginal] = useState(perfil);
 
   useEffect(() => {
+    const configuracoes = obterConfiguracoes();
     const usuario = obterUsuarioLogado();
 
-    if (!usuario) return;
+    queueMicrotask(() => {
+      setMoeda(configuracoes.moeda);
+      setNotificacoesAtivas(configuracoes.lembretes.ativo);
+      setPreferenciasLembretes(configuracoes.lembretes);
 
-    const dadosDoUsuario = {
-      ...perfil,
-      nome: usuario.nome,
-      email: usuario.email,
-    };
+      if (!usuario) return;
 
-    // O estado inicial é enriquecido com os dados locais após a hidratação.
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setPerfil(dadosDoUsuario);
-    setPerfilOriginal(dadosDoUsuario);
+      const dadosDoUsuario = {
+        ...perfil,
+        nome: usuario.nome,
+        email: usuario.email,
+      };
+
+      setPerfil(dadosDoUsuario);
+      setPerfilOriginal(dadosDoUsuario);
+    });
+
     // A leitura ocorre apenas no navegador: a autenticação é salva localmente.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -86,6 +112,24 @@ export function ConfiguracoesPage() {
   ) {
     event.preventDefault();
     setToast(mensagem);
+  }
+
+  async function salvarNegocio(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSalvandoMoeda(true);
+
+    try {
+      await salvarMoedaComCotacao(moeda, preferenciasLembretes);
+      setToast(
+        moeda === 'BRL'
+          ? 'Informações do negócio salvas com sucesso.'
+          : 'Informações salvas e cotação atualizada com sucesso.'
+      );
+    } catch {
+      setToast('Não foi possível atualizar a cotação. Tente novamente.');
+    } finally {
+      setSalvandoMoeda(false);
+    }
   }
 
   return (
@@ -116,25 +160,27 @@ export function ConfiguracoesPage() {
 
       {abaAtiva === 'negocio' && (
         <AbaNegocio
+          moeda={moeda}
+          salvando={salvandoMoeda}
+          aoMudarMoeda={setMoeda}
           aoCancelar={() => setToast('Alterações não salvas foram descartadas.')}
-          aoSalvar={(event) =>
-            mostrarMensagemAoSalvar(
-              event,
-              'Informações do negócio salvas com sucesso.'
-            )
-          }
+          aoSalvar={salvarNegocio}
         />
       )}
 
       {abaAtiva === 'lembretes' && (
         <AbaLembretes
           notificacoesAtivas={notificacoesAtivas}
-          aoMudarNotificacoes={setNotificacoesAtivas}
+          preferencias={preferenciasLembretes}
+          aoMudarNotificacoes={(ativo) => {
+            setNotificacoesAtivas(ativo);
+            setPreferenciasLembretes({ ...preferenciasLembretes, ativo });
+          }}
+          aoMudarPreferencia={(chave, valor) =>
+            setPreferenciasLembretes({ ...preferenciasLembretes, [chave]: valor })
+          }
           aoSalvar={(event) =>
-            mostrarMensagemAoSalvar(
-              event,
-              'Preferências de lembretes salvas com sucesso.'
-            )
+            {mostrarMensagemAoSalvar(event, 'Preferências de lembretes salvas com sucesso.'); salvarConfiguracoes({ ...obterConfiguracoes(), moeda, lembretes: preferenciasLembretes });}
           }
         />
       )}
@@ -143,12 +189,8 @@ export function ConfiguracoesPage() {
         <AbaConta
           aoAbrirModalSenha={() => setModalAberto('senha')}
           aoAbrirModalExcluir={() => setModalAberto('excluir')}
-          aoExportar={() => setToast('Download do arquivo de dados iniciado.')}
-          aoSair={() =>
-            setToast(
-              'Esta ação estará disponível quando a conta estiver conectada ao servidor.'
-            )
-          }
+          aoExportar={() => { exportarDadosLocais(); setToast('Arquivo com seus dados locais foi baixado.'); }}
+          aoSair={() => { logout(); router.push('/login'); }}
         />
       )}
 
@@ -327,9 +369,15 @@ function AbaPerfil({
 }
 
 function AbaNegocio({
+  moeda,
+  salvando,
+  aoMudarMoeda,
   aoCancelar,
   aoSalvar,
 }: {
+  moeda: CodigoMoeda;
+  salvando: boolean;
+  aoMudarMoeda: (moeda: CodigoMoeda) => void;
   aoCancelar: () => void;
   aoSalvar: (event: FormEvent<HTMLFormElement>) => void;
 }) {
@@ -383,10 +431,16 @@ function AbaNegocio({
 
           <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-2">
             <CampoRotulado titulo="Moeda padrão">
-              <select defaultValue="BRL" className={CLASSE_CAMPO}>
-                <option value="BRL">Real brasileiro (R$)</option>
-                <option value="USD">Dólar americano (US$)</option>
-                <option value="EUR">Euro (€)</option>
+              <select
+                value={moeda}
+                onChange={(event) => aoMudarMoeda(event.target.value as CodigoMoeda)}
+                className={CLASSE_CAMPO}
+              >
+                {Object.values(MOEDAS_SUPORTADAS).map((opcao) => (
+                  <option key={opcao.codigo} value={opcao.codigo}>
+                    {opcao.nome} ({opcao.simbolo})
+                  </option>
+                ))}
               </select>
             </CampoRotulado>
 
@@ -401,7 +455,11 @@ function AbaNegocio({
           </div>
         </div>
 
-        <AcoesFormulario aoCancelar={aoCancelar} />
+        <AcoesFormulario
+          aoCancelar={aoCancelar}
+          textoSalvar={salvando ? 'Atualizando cotação...' : 'Salvar alterações'}
+          desabilitado={salvando}
+        />
       </form>
     </section>
   );
@@ -409,11 +467,18 @@ function AbaNegocio({
 
 function AbaLembretes({
   notificacoesAtivas,
+  preferencias,
   aoMudarNotificacoes,
+  aoMudarPreferencia,
   aoSalvar,
 }: {
   notificacoesAtivas: boolean;
+  preferencias: PreferenciasLembretes;
   aoMudarNotificacoes: (ativo: boolean) => void;
+  aoMudarPreferencia: (
+    chave: 'pagamentos' | 'atendimentos' | 'lembretes',
+    valor: string
+  ) => void;
   aoSalvar: (event: FormEvent<HTMLFormElement>) => void;
 }) {
   return (
@@ -455,16 +520,22 @@ function AbaLembretes({
             titulo="Pagamentos próximos do vencimento"
             descricao="Receba um aviso antes de uma cobrança vencer."
             desabilitado={!notificacoesAtivas}
+            antecedencia={preferencias.pagamentos}
+            aoMudarAntecedencia={(valor) => aoMudarPreferencia('pagamentos', valor)}
           />
           <OpcaoLembrete
             titulo="Atendimentos agendados"
             descricao="Não perca os serviços marcados na sua agenda."
             desabilitado={!notificacoesAtivas}
+            antecedencia={preferencias.atendimentos}
+            aoMudarAntecedencia={(valor) => aoMudarPreferencia('atendimentos', valor)}
           />
           <OpcaoLembrete
             titulo="Lembretes cadastrados"
             descricao="Seja avisado sobre tarefas que você programou."
             desabilitado={!notificacoesAtivas}
+            antecedencia={preferencias.lembretes}
+            aoMudarAntecedencia={(valor) => aoMudarPreferencia('lembretes', valor)}
           />
         </div>
 
@@ -598,18 +669,27 @@ function CampoRotulado({
   );
 }
 
-function AcoesFormulario({ aoCancelar }: { aoCancelar: () => void }) {
+function AcoesFormulario({
+  aoCancelar,
+  textoSalvar = 'Salvar alterações',
+  desabilitado = false,
+}: {
+  aoCancelar: () => void;
+  textoSalvar?: string;
+  desabilitado?: boolean;
+}) {
   return (
     <div className="flex justify-end gap-3 border-t border-slate-100 pt-6">
-      <button type="button" onClick={aoCancelar} className={CLASSE_BOTAO_SECUNDARIO}>
+      <button type="button" onClick={aoCancelar} disabled={desabilitado} className={CLASSE_BOTAO_SECUNDARIO}>
         Cancelar
       </button>
       <button
         type="submit"
+        disabled={desabilitado}
         className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-500/20 transition hover:bg-blue-700"
       >
         <Icon name="save" className="h-4 w-4" />
-        Salvar alterações
+        {textoSalvar}
       </button>
     </div>
   );
@@ -648,10 +728,14 @@ function OpcaoLembrete({
   titulo,
   descricao,
   desabilitado,
+  antecedencia,
+  aoMudarAntecedencia,
 }: {
   titulo: string;
   descricao: string;
   desabilitado: boolean;
+  antecedencia: string;
+  aoMudarAntecedencia: (valor: string) => void;
 }) {
   const [selecionado, setSelecionado] = useState(true);
 
@@ -673,12 +757,17 @@ function OpcaoLembrete({
 
       <select
         disabled={!selecionado || desabilitado}
-        defaultValue="1"
+        value={antecedencia}
+        onChange={(event) => aoMudarAntecedencia(event.target.value)}
         className="rounded-lg border border-slate-300 bg-white px-3 py-2 text-xs text-slate-700 outline-none focus:ring-2 focus:ring-blue-600"
       >
         <option value="0">No mesmo dia</option>
+        <option value="30m">30 minutos antes</option>
+        <option value="1h">1 hora antes</option>
+        <option value="2h">2 horas antes</option>
         <option value="1">1 dia antes</option>
         <option value="3">3 dias antes</option>
+        <option value="7">7 dias antes</option>
       </select>
     </div>
   );
