@@ -11,8 +11,8 @@ import {
   type Atendimento,
   type StatusAtendimento,
 } from '@/services/atendimentoService'
+import { exportacao } from '@/services/exportacaoService'
 import { formatarValor } from '@/services/formatters'
-import * as XLSX from 'xlsx'
 
 interface AtendimentoExibicao {
   id: string
@@ -71,27 +71,10 @@ function parseDataAtendimento(valor: string) {
   return Number.isNaN(data.getTime()) ? null : data
 }
 
-function mesmaData(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  )
-}
-
 function formatarDataLabel(valor: string) {
   const data = parseDataAtendimento(valor)
 
   if (!data) return 'Sem data'
-
-  const hoje = new Date()
-
-  const ontem = new Date()
-  ontem.setDate(hoje.getDate() - 1)
-
-  if (mesmaData(data, hoje)) return 'Hoje'
-
-  if (mesmaData(data, ontem)) return 'Ontem'
 
   return data
     .toLocaleDateString('pt-BR', {
@@ -556,353 +539,53 @@ export function AtendimentosPage() {
     )
   }
 
-  const obterNomeArquivo = (
-    extensao: string
-  ) => {
-    const data = new Date()
-      .toISOString()
-      .split('T')[0]
-
-    return `atendimentos-${data}.${extensao}`  // ✅ Removido espaços
-  }
-
-  const exportarXLSX = () => {
-    const dados =
-      prepararDadosExportacao()
-
-    if (dados.length === 0) {
-      setErro(
-        'Não há atendimentos para exportar.'
-      )
-      return
-    }
-
-    const worksheet =
-      XLSX.utils.json_to_sheet(dados)
-
-    const workbook =
-      XLSX.utils.book_new()
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      'Atendimentos'
-    )
-
-    worksheet['!cols'] = [
-      { wch: 12 },
-      { wch: 8 },
-      { wch: 20 },
-      { wch: 15 },
-      { wch: 35 },
-      { wch: 10 },
-      { wch: 15 },
-      { wch: 18 },
-    ]
-
-    XLSX.writeFile(
-      workbook,
-      obterNomeArquivo('xlsx')
-    )
-  }
-
-  const exportarXLS = () => {
-    const dados =
-      prepararDadosExportacao()
-
-    if (dados.length === 0) {
-      setErro(
-        'Não há atendimentos para exportar.'
-      )
-      return
-    }
-
-    const worksheet =
-      XLSX.utils.json_to_sheet(dados)
-
-    const workbook =
-      XLSX.utils.book_new()
-
-    XLSX.utils.book_append_sheet(
-      workbook,
-      worksheet,
-      'Atendimentos'
-    )
-
-    worksheet['!cols'] = [
-      { wch: 12 },
-      { wch: 8 },
-      { wch: 20 },
-      { wch: 15 },
-      { wch: 35 },
-      { wch: 10 },
-      { wch: 15 },
-      { wch: 18 },
-    ]
-
-    XLSX.writeFile(
-      workbook,
-      obterNomeArquivo('xls'),
-      {
-        bookType: 'biff8',
-      }
-    )
-  }
-
-  const exportarCSV = () => {
-    const dados =
-      prepararDadosExportacao()
-
-    if (dados.length === 0) {
-      setErro(
-        'Não há atendimentos para exportar.'
-      )
-      return
-    }
-
-    const worksheet =
-      XLSX.utils.json_to_sheet(dados)
-
-    const csv =
-      XLSX.utils.sheet_to_csv(
-        worksheet
-      )
-
-    const blob = new Blob(
-      [csv],
-      {
-        type: 'text/csv;charset=utf-8;',
-      }
-    )
-
-    const url =
-      URL.createObjectURL(blob)
-
-    const link =
-      document.createElement('a')
-
-    link.href = url
-    link.download =
-      obterNomeArquivo('csv')
-
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-
-    URL.revokeObjectURL(url)
-  }
-
-  const exportarPDF = async () => {
-    try {
-      const dados =
-        prepararDadosExportacao()
-
-      if (dados.length === 0) {
-        setErro(
-          'Não há atendimentos para exportar.'
-        )
-        return
-      }
-
-      const { jsPDF } =
-        await import('jspdf')
-
-      const { autoTable } =
-        await import('jspdf-autotable')
-
-      const doc = new jsPDF({
-        orientation: 'landscape',
-        unit: 'mm',
-        format: 'a4',
-      })
-
-      doc.setFontSize(16)
-      doc.text(
-        'Relatório de Atendimentos',
-        14,
-        15
-      )
-
-      doc.setFontSize(9)
-      doc.text(
-        `Gerado em ${new Date().toLocaleString(
-          'pt-BR'
-        )
-        } `,
-        14,
-        21
-      )
-
-      autoTable(doc, {
-        head: [
-          Object.keys(dados[0]),
-        ],
-        body: dados.map((item) =>
-          Object.values(item)
-        ),
-        startY: 27,
-        margin: {
-          top: 10,
-          right: 10,
-          bottom: 10,
-          left: 10,
-        },
-        styles: {
-          fontSize: 8,
-          cellPadding: 3,
-        },
-        headStyles: {
-          fillColor: [
-            59,
-            130,
-            246,
-          ],
-          textColor: [
-            255,
-            255,
-            255,
-          ],
-          fontStyle: 'bold',
-        },
-        alternateRowStyles: {
-          fillColor: [
-            248,
-            250,
-            252,
-          ],
-        },
-      })
-
-      doc.save(
-        obterNomeArquivo('pdf')
-      )
-    } catch (error) {
-      console.error(
-        'Erro ao exportar PDF:',
-        error
-      )
-
-      setErro(
-        'Erro ao exportar em PDF. Tente outro formato.'
-      )
-    }
-  }
-
-  const exportarPNG = async () => {
-    try {
-      const table = document.querySelector('table')
-
-      if (!table) {
-        setErro('Tabela não encontrada para exportação.')
-        return
-      }
-
-      // Clone e remove classes Tailwind
-      const tableClone = table.cloneNode(true) as HTMLElement
-      tableClone.querySelectorAll('[class]').forEach((el) => {
-        el.removeAttribute('class')
-      })
-
-      // Adiciona estilos inline básicos
-      tableClone.style.borderCollapse = 'collapse'
-      tableClone.style.width = '100%'
-      tableClone.style.fontFamily = 'Arial, sans-serif'
-      tableClone.style.fontSize = '12px'
-
-      tableClone.querySelectorAll('th').forEach((th) => {
-        const thElement = th as HTMLElement
-        thElement.style.backgroundColor = '#3b82f6'
-        thElement.style.color = '#ffffff'
-        thElement.style.padding = '12px'
-        thElement.style.textAlign = 'left'
-        thElement.style.border = '1px solid #e2e8f0'
-        thElement.style.fontWeight = 'bold'
-      })
-
-      tableClone.querySelectorAll('td').forEach((td) => {
-        const tdElement = td as HTMLElement
-        tdElement.style.padding = '12px'
-        tdElement.style.border = '1px solid #e2e8f0'
-      })
-
-      tableClone.querySelectorAll('tr:nth-child(even)').forEach((tr) => {
-        const trElement = tr as HTMLElement
-        trElement.style.backgroundColor = '#f8fafc'
-      })
-
-      // Container temporário
-      const tempContainer = document.createElement('div')
-      tempContainer.style.position = 'absolute'
-      tempContainer.style.left = '-9999px'
-      tempContainer.style.top = '-9999px'
-      tempContainer.style.backgroundColor = '#ffffff'
-      tempContainer.style.padding = '20px'
-      tempContainer.appendChild(tableClone)
-      document.body.appendChild(tempContainer)
-
-      const html2canvas = (await import('html2canvas')).default
-
-      const canvas = await html2canvas(tempContainer, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        logging: false,
-        allowTaint: true,
-      })
-
-      // Remove o container temporário
-      document.body.removeChild(tempContainer)
-
-      // Download
-      const link = document.createElement('a')
-      link.href = canvas.toDataURL('image/png')
-      link.download = obterNomeArquivo('png')
-      link.click()
-    } catch (error) {
-      console.error('Erro ao exportar PNG:', error)
-      setErro('Erro ao exportar como imagem. Tente outro formato.')
-    }
-  }
-
   const handleExportar = async (
     tipo: string
   ) => {
     try {
       setErro(null)
 
+      const dados = prepararDadosExportacao()
+
+      const opcoes = {
+        nomeArquivo: 'atendimentos',
+        nomePlanilha: 'Atendimentos',
+      }
+
       switch (tipo) {
         case 'xlsx':
-          exportarXLSX()
+          exportacao.exportarXLSX(dados, opcoes)
           break
 
         case 'xls':
-          exportarXLS()
+          exportacao.exportarXLS(dados, opcoes)
           break
 
         case 'csv':
-          exportarCSV()
+          exportacao.exportarCSV(dados, opcoes)
           break
 
         case 'pdf':
-          await exportarPDF()
+          await exportacao.exportarPDF(dados, opcoes)
           break
 
         case 'png':
-          await exportarPNG()
+          const table = document.querySelector('table')
+          if (table) {
+            await exportacao.exportarPNG(table, opcoes)
+          }
           break
 
         default:
-          setErro(
-            'Formato não suportado.'
-          )
+          setErro('Formato não suportado.')
       }
     } catch (error) {
-      console.error(
-        'Erro na exportação:',
-        error
-      )
+      console.error('Erro na exportação:', error)
 
       setErro(
-        'Erro ao exportar dados.'
+        error instanceof Error
+          ? error.message
+          : 'Erro ao exportar dados.'
       )
     }
   }

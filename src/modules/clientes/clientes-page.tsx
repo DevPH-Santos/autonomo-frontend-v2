@@ -10,6 +10,10 @@ import { formatarValor } from '@/services/formatters'
 //modal de visuaização
 import { VisualizarClienteModal } from '@/components/ui/VisualizarClienteModal'
 
+//serviços de exportação
+import { exportacao } from '@/services/exportacaoService'
+import { ExportarModal } from '@/components/ui/ExportarModal'
+
 interface ClienteExibicao extends Cliente {
   iniciais: string
   cor: 'sky' | 'slate'
@@ -31,6 +35,9 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
   //use states de visualização
   const [modalVisualizarAberto, setModalVisualizarAberto] = useState(false)
   const [clienteSelecionado, setClienteSelecionado] = useState<ClienteExibicao | null>(null)
+
+  //clientes selecionados p/ exportar
+  const [modalExportarAberto, setModalExportarAberto] = useState(false)
 
   const itensPorPagina = 10
 
@@ -131,6 +138,15 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
     setModalClienteAberto(true)
   }
 
+  //exportar dados
+  const handleAbrirModalExportar = () => {
+    setModalExportarAberto(true)
+  }
+
+  const handleFecharModalExportar = () => {
+    setModalExportarAberto(false)
+  }
+
   const handleVisualizarCliente = (cliente: ClienteExibicao) => {
 
     setClienteSelecionado(cliente)
@@ -178,8 +194,81 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
   //   )
   // }
 
+  // ============================================
+  // EXPORTAÇÃO
+  // ============================================
+
+  const prepararDadosExportacao = () => {
+    return clientesFiltrados.map((cliente) => ({
+      Nome: cliente.nome_cliente,
+      Telefone: cliente.telefone_cliente,
+      Email: cliente.email_cliente,
+      Endereço: cliente.endereco_cliente,
+      Bairro: cliente.bairro_cliente,
+      Serviço: cliente.tipo_contratacao_cliente,
+      Frequência: cliente.frequencia_cliente,
+      'Valor da Visita': `R$ ${formatarValor(cliente.valor_visita_cliente)}`,
+      Status: cliente.status_cliente,
+    }))
+  }
+
+  const handleExportar = async (tipo: string) => {
+    try {
+      setErro(null)
+
+      const dados = prepararDadosExportacao()
+
+      if (dados.length === 0) {
+        setErro('Não há clientes para exportar.')
+        return
+      }
+
+      const opcoes = {
+        nomeArquivo: 'clientes',
+        nomePlanilha: 'Clientes',
+      }
+
+      switch (tipo) {
+        case 'xlsx':
+          exportacao.exportarXLSX(dados, opcoes)
+          break
+        case 'xls':
+          exportacao.exportarXLS(dados, opcoes)
+          break
+        case 'csv':
+          exportacao.exportarCSV(dados, opcoes)
+          break
+        case 'pdf':
+          await exportacao.exportarPDF(dados, opcoes)
+          break
+        case 'png':
+          const table = document.querySelector('table')
+          if (table) {
+            await exportacao.exportarPNG(table, opcoes)
+          }
+          break
+        default:
+          setErro('Formato não suportado.')
+      }
+
+      setModalExportarAberto(false)
+    } catch (error) {
+      console.error('Erro na exportação:', error)
+      setErro(
+        error instanceof Error ? error.message : 'Erro ao exportar dados.'
+      )
+    }
+  }
+
   return (
     <>
+
+      {/* modal de exportação */}
+      <ExportarModal
+        isOpen={modalExportarAberto}
+        onClose={handleFecharModalExportar}
+        onExportar={handleExportar}
+      />
 
       {/* Modal de visualização */}
       <VisualizarClienteModal
@@ -524,6 +613,34 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
               </div>
             </div>
           )}
+        </div>
+        {/* RODAPÉ / EXPORTAÇÃO */}
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <p className="text-sm text-slate-600">
+            Total de{' '}
+            <span className="font-bold text-slate-900">
+              {
+                clientesFiltrados.length
+              }
+            </span>{' '}
+            atendimento
+            {clientesFiltrados.length !==
+              1
+              ? 's'
+              : ''}
+          </p>
+
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={handleAbrirModalExportar}
+              className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+            >
+              <Icon name="download" />
+              Exportar Relatório
+            </button>
+          </div>
         </div>
       </div>
     </>
