@@ -26,26 +26,69 @@ export function NotificationsModal({
     <>
       {/* Overlay */}
       <div
-        className="fixed inset-0 z-40 transition-all duration-300"
+        className="fixed inset-0 z-40"
         onClick={onClose}
+        aria-hidden="true"
       />
 
       {/* Modal */}
-      <div className="absolute top-[120%] right-14 w-[380px] bg-white rounded-2xl shadow-[0_16px_32px_rgba(42,52,57,0.08)] border border-slate-200 z-50 overflow-hidden transform opacity-100 translate-y-0 transition-all duration-300 origin-top-right">
+      <div
+        className="
+          fixed z-50
+
+          /* Mobile */
+          top-20 left-3 right-3
+          w-auto
+          max-w-none
+          rounded-2xl
+
+          /* Tablet */
+          sm:left-auto
+          sm:right-4
+          sm:w-[min(380px,calc(100vw-2rem))]
+
+          /* Desktop */
+          lg:right-8
+
+          bg-white
+          border border-slate-200
+          shadow-[0_16px_32px_rgba(42,52,57,0.08)]
+          overflow-hidden
+
+          max-h-[calc(100vh-6rem)]
+
+          opacity-100
+          translate-y-0
+          transition-all duration-300
+          origin-top-right
+        "
+      >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
-          <div className="flex items-center gap-3">
-            <h3 className="font-semibold text-on-surface text-lg">Notificações</h3>
+        <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-200 flex items-center justify-between gap-3 bg-slate-50">
+          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+            <h3 className="font-semibold text-on-surface text-base sm:text-lg whitespace-nowrap">
+              Notificações
+            </h3>
+
             {unreadCount > 0 && (
-              <span className="bg-blue-100 text-blue-600 text-xs font-semibold px-2 py-0.5 rounded-full">
+              <span className="bg-blue-100 text-blue-600 text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">
                 {unreadCount} {unreadCount === 1 ? 'nova' : 'novas'}
               </span>
             )}
           </div>
+
           {onMarkAsRead && (
             <button
               onClick={onMarkAsRead}
-              className="text-xs text-slate-600 hover:text-blue-600 transition-colors font-medium"
+              className="
+                text-[11px] sm:text-xs
+                text-slate-600
+                hover:text-blue-600
+                transition-colors
+                font-medium
+                whitespace-nowrap
+                shrink-0
+              "
             >
               Marcar como lidas
             </button>
@@ -53,28 +96,50 @@ export function NotificationsModal({
         </div>
 
         {/* Notification List */}
-        <div className="max-h-[400px] overflow-y-auto no-scrollbar">
+        <div
+          className="
+            overflow-y-auto
+            no-scrollbar
+            max-h-[calc(100vh-13rem)]
+            sm:max-h-[400px]
+          "
+        >
           {children ? (
             children
           ) : (
-            <div className="px-5 py-12 text-center">
-              <Icon name="notifications" className="text-4xl text-slate-300 mx-auto mb-3" />
-              <p className="text-sm text-slate-500">Nenhuma notificação</p>
+            <div className="px-4 sm:px-5 py-10 sm:py-12 text-center">
+              <Icon
+                name="notifications"
+                className="text-4xl text-slate-300 mx-auto mb-3"
+              />
+
+              <p className="text-sm text-slate-500">
+                Nenhuma notificação
+              </p>
             </div>
           )}
         </div>
 
         {/* Footer */}
-        <div className="p-3 bg-slate-50 border-t border-slate-200">
+        <div className="p-2.5 sm:p-3 bg-slate-50 border-t border-slate-200">
           {onViewAll ? (
             <button
               onClick={onViewAll}
-              className="w-full py-2.5 text-sm font-medium text-blue-600 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+              className="
+                w-full
+                py-2.5
+                text-xs sm:text-sm
+                font-medium
+                text-blue-600
+                hover:bg-blue-50
+                rounded-lg
+                transition-colors duration-200
+              "
             >
               Ver todas as notificações
             </button>
           ) : (
-            <div className="py-2.5 text-sm text-slate-500 text-center">
+            <div className="py-2.5 text-xs sm:text-sm text-slate-500 text-center">
               Sem mais ações
             </div>
           )}
@@ -85,6 +150,7 @@ export function NotificationsModal({
         .no-scrollbar::-webkit-scrollbar {
           display: none;
         }
+
         .no-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;
