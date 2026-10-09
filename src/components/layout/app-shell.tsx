@@ -314,7 +314,7 @@ export function AppShell({
               <button
                 type="button"
                 onClick={() => setCalendarioAberto((aberto) => !aberto)}
-                className="hidden sm:flex cursor-pointer text-slate-600 hover:text-blue-600 transition-colors p-2 hover:bg-slate-100 rounded-lg"
+                className="cursor-pointer text-slate-600 hover:text-blue-600 transition-colors p-2 hover:bg-slate-100 rounded-lg"
                 aria-label="Calendário"
                 aria-expanded={calendarioAberto}
               >
