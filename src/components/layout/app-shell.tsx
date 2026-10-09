@@ -9,6 +9,8 @@ import { logout, obterUsuarioLogado, type Usuario } from '@/services/authService
 import { NotificationsModal } from '@/components/ui/NotificationsModal';
 import { NotificationItem } from '@/components/ui/NotificationItem';
 
+import CalendarioModal from '@/components/ui/CalendarioModal';
+
 const navigation = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
   { href: '/clientes', label: 'Clientes', icon: 'contacts_product' },
@@ -94,6 +96,8 @@ export function AppShell({
   // ========================================
   const [notificacoesAberto, setNotificacoesAberto] = useState(false);
   const [notificacoes, setNotificacoes] = useState(exemploNotificacoes);
+
+  const [calendarioAberto, setCalendarioAberto] = useState(false);
 
   const unreadCount = notificacoes.filter(
     (notificacao) => notificacao.isUnread
@@ -308,11 +312,19 @@ export function AppShell({
 
               {/* Calendário */}
               <button
+                type="button"
+                onClick={() => setCalendarioAberto((aberto) => !aberto)}
                 className="hidden sm:flex cursor-pointer text-slate-600 hover:text-blue-600 transition-colors p-2 hover:bg-slate-100 rounded-lg"
                 aria-label="Calendário"
+                aria-expanded={calendarioAberto}
               >
                 <Icon name="calendar_today" />
               </button>
+
+              <CalendarioModal
+                isOpen={calendarioAberto}
+                onClose={() => setCalendarioAberto(false)}
+              />
 
               {/* ========== NOTIFICAÇÕES ========== */}
               <div className="relative">
