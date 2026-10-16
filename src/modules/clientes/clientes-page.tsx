@@ -624,7 +624,7 @@ export function ClientesPage({ busca = '' }: { busca?: string }) {
                 clientesFiltrados.length
               }
             </span>{' '}
-            atendimento
+            cliente
             {clientesFiltrados.length !==
               1
               ? 's'
