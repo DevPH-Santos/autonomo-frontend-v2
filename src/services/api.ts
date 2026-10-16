@@ -7,6 +7,17 @@
 const API_BASE_URL = "https://autonomo-backend.onrender.com";
 
 /**
+ * Opções adicionais para chamadas da API.
+ *
+ * Alguns endpoints públicos, como login, também podem responder 401 para
+ * credenciais inválidas. Nesses casos, a tela deve tratar a mensagem sem
+ * redirecionar ou recarregar a página.
+ */
+interface ApiFetchOptions extends RequestInit {
+  redirectOnUnauthorized?: boolean;
+}
+
+/**
  * Função auxiliar para realizar requisições HTTP para a API.
  *
  * Ela centraliza configurações comuns, como:
@@ -20,13 +31,14 @@ const API_BASE_URL = "https://autonomo-backend.onrender.com";
  */
 export async function apiFetch<T = unknown>(
   endpoint: string,
-  options: RequestInit = {}
+  options: ApiFetchOptions = {}
 ): Promise<T> {
+  const { redirectOnUnauthorized = true, ...requestOptions } = options;
   const token =
     typeof window !== "undefined" ? localStorage.getItem("token") : null;
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-    ...options,
+    ...requestOptions,
     /**
      * Define que os dados enviados e recebidos estarão em formato JSON.
      * O spread de options.headers permite adicionar headers extras depois,
@@ -35,7 +47,7 @@ export async function apiFetch<T = unknown>(
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers as Record<string, string>),
+      ...(requestOptions.headers as Record<string, string>),
     },
   });
 
@@ -49,7 +61,7 @@ export async function apiFetch<T = unknown>(
    * Se o status HTTP for 401 (Não Autorizado/Token Expirado),
    * limpa a sessão salva e redireciona para a página de login.
    */
-  if (response.status === 401) {
+  if (response.status === 401 && redirectOnUnauthorized) {
     if (typeof window !== "undefined") {
       localStorage.removeItem("token");
       localStorage.removeItem("usuario");

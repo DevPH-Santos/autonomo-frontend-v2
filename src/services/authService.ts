@@ -44,6 +44,7 @@ export interface CadastroResponse {
 export function login(email: string, senha: string): Promise<LoginResponse> {
   return apiFetch<LoginResponse>("/auth/login", {
     method: "POST",
+    redirectOnUnauthorized: false,
     /**
      * O backend espera receber exatamente:
      * {
