@@ -54,13 +54,13 @@ export function ProdutosPage() {
 
   const totalProdutos = produtos.length
 
-  const custoMedio =
-    totalProdutos > 0
-      ? formatarMoeda(
-        produtos.reduce((acc, p) => acc + Number(p.valor_produto || 0), 0) /
-        totalProdutos
-      )
-      : formatarMoeda(0)
+  const custoTotal = formatarMoeda(
+    produtos.reduce((acc, p) => {
+      const valor = Number(p.valor_produto || 0)
+      const quantidade = Number(p.quantidade_produto || 0)
+      return acc + (valor * quantidade)
+    }, 0)
+  )
 
   const status = totalProdutos > 0 ? 'Ativo' : 'Vazio'
 
@@ -210,10 +210,10 @@ export function ProdutosPage() {
             </div>
             <div>
               <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
-                Preço Médio
+                Preço Total
               </p>
               <h3 className="text-2xl font-bold text-slate-900 mt-1">
-                {custoMedio}
+                {custoTotal}
               </h3>
             </div>
           </div>
