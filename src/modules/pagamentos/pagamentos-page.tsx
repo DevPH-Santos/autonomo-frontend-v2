@@ -12,13 +12,6 @@ import {
 import type { Pagamento as PagamentoAPI } from '@/services/pagamentoService'
 import { formatarMoeda } from '@/services/configuracoesService'
 import { ExportarModal } from '@/components/ui/ExportarModal'
-import {
-  atualizarAtendimento,
-  deletarAtendimento,
-  listarAtendimentos,
-  type Atendimento,
-  type StatusAtendimento,
-} from '@/services/atendimentoService'
 import { exportacao } from '@/services/exportacaoService'
 
 // ==========================================

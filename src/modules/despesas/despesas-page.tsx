@@ -10,13 +10,6 @@ import {
 import type { Despesa as DespesaAPI } from '@/services/despesaService'
 import { formatarMoeda } from '@/services/configuracoesService'
 import { ExportarModal } from '@/components/ui/ExportarModal'
-import {
-  atualizarAtendimento,
-  deletarAtendimento,
-  listarAtendimentos,
-  type Atendimento,
-  type StatusAtendimento,
-} from '@/services/atendimentoService'
 import { exportacao } from '@/services/exportacaoService'
 
 // ==========================================
