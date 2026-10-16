@@ -71,6 +71,81 @@ function parseDataAtendimento(valor: string) {
   return Number.isNaN(data.getTime()) ? null : data
 }
 
+function inicioDoDia(data: Date) {
+  return new Date(data.getFullYear(), data.getMonth(), data.getDate())
+}
+
+function inicioDaSemana(data: Date) {
+  const inicio = inicioDoDia(data)
+  const diasDesdeSegunda = (inicio.getDay() + 6) % 7
+
+  inicio.setDate(inicio.getDate() - diasDesdeSegunda)
+
+  return inicio
+}
+
+function adicionarDias(data: Date, quantidade: number) {
+  const resultado = inicioDoDia(data)
+
+  resultado.setDate(resultado.getDate() + quantidade)
+
+  return resultado
+}
+
+function pertenceAoPeriodo(
+  valor: string,
+  dataReferencia: Date,
+  visualizacao: 'dia' | 'semana'
+) {
+  const dataAtendimento = parseDataAtendimento(valor)
+
+  if (!dataAtendimento) return false
+
+  const data = inicioDoDia(dataAtendimento)
+  const inicio =
+    visualizacao === 'dia'
+      ? inicioDoDia(dataReferencia)
+      : inicioDaSemana(dataReferencia)
+  const fim = adicionarDias(inicio, visualizacao === 'dia' ? 1 : 7)
+
+  return data >= inicio && data < fim
+}
+
+function formatarPeriodo(
+  dataReferencia: Date,
+  visualizacao: 'dia' | 'semana'
+) {
+  if (visualizacao === 'dia') {
+    return dataReferencia.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    })
+  }
+
+  const inicio = inicioDaSemana(dataReferencia)
+  const fim = adicionarDias(inicio, 6)
+  const mesmoAno = inicio.getFullYear() === fim.getFullYear()
+  const mesmoMes = mesmoAno && inicio.getMonth() === fim.getMonth()
+
+  if (mesmoMes) {
+    return `${inicio.toLocaleDateString('pt-BR', { day: '2-digit' })} a ${fim.toLocaleDateString('pt-BR', {
+      day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    })}`
+  }
+
+  return `${inicio.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+  })} a ${fim.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+  })}`
+}
+
 function formatarDataLabel(valor: string) {
   const data = parseDataAtendimento(valor)
 
@@ -290,13 +365,7 @@ export function AtendimentosPage() {
   const [activeView, setActiveView] =
     useState<'dia' | 'semana'>('dia')
 
-  const [currentDate] = useState(() =>
-    new Date().toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: 'long',
-      year: 'numeric',
-    })
-  )
+  const [dataReferencia, setDataReferencia] = useState(() => inicioDoDia(new Date()))
 
   const [modalAberto, setModalAberto] =
     useState(false)
@@ -377,6 +446,12 @@ export function AtendimentosPage() {
 
   const atendimentosFiltrados = useMemo(() => {
     return atendimentos.filter((atendimento) => {
+      const correspondePeriodo = pertenceAoPeriodo(
+        atendimento.dataOriginal,
+        dataReferencia,
+        activeView
+      )
+
       const correspondeStatus =
         statusFiltro === 'todos' ||
         atendimento.status === statusFiltro
@@ -386,15 +461,31 @@ export function AtendimentosPage() {
         atendimento.client === clienteFiltro
 
       return (
+        correspondePeriodo &&
         correspondeStatus &&
         correspondeCliente
       )
     })
   }, [
     atendimentos,
+    dataReferencia,
+    activeView,
     statusFiltro,
     clienteFiltro,
   ])
+
+  const periodoAtual = useMemo(
+    () => formatarPeriodo(dataReferencia, activeView),
+    [dataReferencia, activeView]
+  )
+
+  function navegarPeriodo(direcao: -1 | 1) {
+    const quantidadeDias = activeView === 'dia' ? 1 : 7
+
+    setDataReferencia((data) =>
+      adicionarDias(data, direcao * quantidadeDias)
+    )
+  }
 
   useEffect(() => {
     setPaginaAtual(1)
@@ -681,26 +772,21 @@ export function AtendimentosPage() {
             <div className="flex gap-1 bg-slate-200 p-1 rounded-lg">
               <button
                 type="button"
-                onClick={() =>
-                  setActiveView('dia')
-                }
-                className={`px - 3 py - 1.5 rounded - lg text - sm font - semibold transition - all ${activeView === 'dia'
+                onClick={() => setActiveView('dia')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeView === 'dia'
                   ? 'bg-white text-blue-600 shadow-sm'
                   : 'bg-transparent text-slate-600 hover:text-slate-900'
-                  } `}
+                  }`}
               >
                 Dia
               </button>
-
               <button
                 type="button"
-                onClick={() =>
-                  setActiveView('semana')
-                }
-                className={`px - 3 py - 1.5 rounded - lg text - sm font - semibold transition - all ${activeView === 'semana'
+                onClick={() => setActiveView('semana')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeView === 'semana'
                   ? 'bg-white text-blue-600 shadow-sm'
                   : 'bg-transparent text-slate-600 hover:text-slate-900'
-                  } `}
+                  }`}
               >
                 Semana
               </button>
@@ -709,20 +795,30 @@ export function AtendimentosPage() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
+                onClick={() => navegarPeriodo(-1)}
                 className="p-1.5 rounded-lg hover:bg-slate-300 transition-colors"
-                aria-label="Dia anterior"
+                aria-label={
+                  activeView === 'dia'
+                    ? 'Dia anterior'
+                    : 'Semana anterior'
+                }
               >
                 <Icon name="chevron_left" />
               </button>
 
               <span className="font-semibold text-slate-900 whitespace-nowrap text-sm capitalize">
-                {currentDate}
+                {periodoAtual}
               </span>
 
               <button
                 type="button"
+                onClick={() => navegarPeriodo(1)}
                 className="p-1.5 rounded-lg hover:bg-slate-300 transition-colors"
-                aria-label="Próximo dia"
+                aria-label={
+                  activeView === 'dia'
+                    ? 'Próximo dia'
+                    : 'Próxima semana'
+                }
               >
                 <Icon name="chevron_right" />
               </button>
