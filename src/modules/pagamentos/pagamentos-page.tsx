@@ -11,6 +11,15 @@ import {
 } from '@/services/pagamentoService'
 import type { Pagamento as PagamentoAPI } from '@/services/pagamentoService'
 import { formatarMoeda } from '@/services/configuracoesService'
+import { ExportarModal } from '@/components/ui/ExportarModal'
+import {
+  atualizarAtendimento,
+  deletarAtendimento,
+  listarAtendimentos,
+  type Atendimento,
+  type StatusAtendimento,
+} from '@/services/atendimentoService'
+import { exportacao } from '@/services/exportacaoService'
 
 // ==========================================
 // CONSTANTES
@@ -160,6 +169,11 @@ export function PagamentosPage() {
   const [filtroCliente, setFiltroCliente] = useState('')
   const [filtroMes, setFiltroMes] = useState('')
 
+  // ===== EXPORTAÇÃO =====
+
+  const [modalExportarAberto, setModalExportarAberto] =
+    useState(false)
+
   // ===== DADOS DERIVADOS =====
 
   const mesesDisponiveis = [...new Set(pagamentos.map((p) => p.mesRef))]
@@ -251,28 +265,80 @@ export function PagamentosPage() {
     setModalDeletarAberto(true)
   }
 
-  // ===== ESTADOS DE LOADING / ERRO =====
+  // ============================================
+  // EXPORTAÇÃO
+  // ============================================
 
-  // if (carregando) {
-  //   return (
-  //     <div className="flex items-center justify-center h-64 text-slate-500">
-  //       <Icon name="refresh" className="animate-spin mr-2" />
-  //       Carregando pagamentos...
-  //     </div>
-  //   )
-  // }
+  const prepararDadosExportacao = () => {
+    return pagamentosFiltrados.map((item) => ({
+      ID: item.id,
+      Cliente: item.cliente ?? "",
+      Valor: item.valor,
+      Forma: item.forma,
+      Status: item.status,
+      Observação: item.observacao ?? "",
+    }));
+  };
 
-  // if (erro) {
-  //   return (
-  //     <div className="flex flex-col items-center justify-center h-64 gap-3 text-slate-500">
-  //       <Icon name="warning" className="text-red-400 text-4xl" />
-  //       <p className="text-sm font-medium">{erro}</p>
-  //       <button onClick={carregarPagamentos} className="text-xs font-bold text-blue-600 underline">
-  //         Tentar novamente
-  //       </button>
-  //     </div>
-  //   )
-  // }
+  const handleExportar = async (tipo: string) => {
+    try {
+      setErro(null)
+
+      const dados = prepararDadosExportacao()
+
+      if (dados.length === 0) {
+        setErro('Não há pagamentos para exportar.')
+        return
+      }
+
+      const opcoes = {
+        nomeArquivo: 'pagamentos',
+        nomePlanilha: 'Pagamentos',
+      }
+
+      switch (tipo.toLowerCase()) {
+        case 'xlsx':
+          exportacao.exportarXLSX(dados, opcoes)
+          break
+
+        case 'xls':
+          exportacao.exportarXLS(dados, opcoes)
+          break
+
+        case 'csv':
+          exportacao.exportarCSV(dados, opcoes)
+          break
+
+        case 'pdf':
+          await exportacao.exportarPDF(dados, opcoes)
+          break
+
+        case 'png': {
+          const tabela = document.querySelector('table')
+
+          if (!tabela) {
+            throw new Error('Tabela de pagamentos não encontrada.')
+          }
+
+          await exportacao.exportarPNG(tabela, opcoes)
+          break
+        }
+
+        default:
+          throw new Error(`Formato de exportação não suportado: ${tipo}`)
+      }
+
+      setModalExportarAberto(false)
+    } catch (error) {
+      console.error('Erro na exportação:', error)
+
+      setErro(
+        error instanceof Error
+          ? error.message
+          : 'Erro ao exportar pagamentos.',
+      )
+    }
+  }
 
   return (
     <div className="space-y-8">
@@ -544,6 +610,55 @@ export function PagamentosPage() {
           carregarPagamentos()
         }}
       />
+
+      {/* ===== EXPORTAÇÃO ===== */}
+      <ExportarModal
+        isOpen={
+          modalExportarAberto
+        }
+        onClose={() =>
+          setModalExportarAberto(
+            false
+          )
+        }
+        onExportar={
+          handleExportar
+        }
+      />
+
+      {/* RODAPÉ / EXPORTAÇÃO */}
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <p className="text-sm text-slate-600">
+          Total de{' '}
+          <span className="font-bold text-slate-900">
+            {
+              pagamentosFiltrados.length
+            }
+          </span>{' '}
+          pagamento
+          {pagamentosFiltrados.length !==
+            1
+            ? 's'
+            : ''}
+        </p>
+
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() =>
+              setModalExportarAberto(
+                true
+              )
+            }
+            className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+          >
+            <Icon name="download" />
+            Exportar Relatório
+          </button>
+        </div>
+      </div>
+
     </div>
   )
 }
