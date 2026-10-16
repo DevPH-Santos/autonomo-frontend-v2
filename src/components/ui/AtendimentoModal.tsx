@@ -140,6 +140,7 @@ export function AtendimentoModal({
   const [salvando, setSalvando] = useState(false)
   const [excluindo, setExcluindo] = useState(false)
   const [erro, setErro] = useState('')
+  const [errosEstoque, setErrosEstoque] = useState<Record<string, string>>({})
   const [dialog, setDialog] = useState<DialogType>(null)
   const [snapshotOriginal, setSnapshotOriginal] = useState('')
 
@@ -178,6 +179,7 @@ export function AtendimentoModal({
 
   function limparEstadosAuxiliares() {
     setErro('')
+    setErrosEstoque({})
     setDialog(null)
     setClienteAberto(false)
     setClientesOpcoes([])
@@ -431,6 +433,12 @@ export function AtendimentoModal({
 
   function removerProduto(id: string) {
     setProdutos((produtosAtuais) => produtosAtuais.filter((produto) => produto.id !== id))
+    setErrosEstoque((errosAtuais) => {
+      if (!errosAtuais[id]) return errosAtuais
+      const proximosErros = { ...errosAtuais }
+      delete proximosErros[id]
+      return proximosErros
+    })
     if (produtoEmEdicao === id) {
       setProdutoEmEdicao(null)
       setBuscarProduto('')
@@ -448,6 +456,45 @@ export function AtendimentoModal({
         produto.id === id ? { ...produto, [campo]: valor } : produto
       )
     )
+    setErrosEstoque((errosAtuais) => {
+      if (!errosAtuais[id]) return errosAtuais
+      const proximosErros = { ...errosAtuais }
+      delete proximosErros[id]
+      return proximosErros
+    })
+  }
+
+  async function validarEstoque(produtosSelecionados: ProdutoAtendimentoForm[]) {
+    const resposta = await listarProdutos()
+    const estoquePorProduto = new Map(
+      resposta.produtos.map((produto) => [
+        String(produto.ID_produto),
+        Number(produto.quantidade_produto) || 0,
+      ])
+    )
+    const quantidadeSolicitadaPorProduto = produtosSelecionados.reduce((quantidades, produto) => {
+      const idProduto = String(produto.ID_produto)
+      quantidades.set(
+        idProduto,
+        (quantidades.get(idProduto) || 0) + produto.quantidade
+      )
+      return quantidades
+    }, new Map<string, number>())
+    const novosErros: Record<string, string> = {}
+
+    for (const produto of produtosSelecionados) {
+      const idProduto = String(produto.ID_produto)
+      const quantidadeSolicitada = quantidadeSolicitadaPorProduto.get(idProduto) || 0
+      const quantidadeDisponivel = estoquePorProduto.get(idProduto) || 0
+
+      if (quantidadeSolicitada > quantidadeDisponivel) {
+        novosErros[produto.id] =
+          `Estoque insuficiente para este produto. Você solicitou ${quantidadeSolicitada} unidade(s), mas há apenas ${quantidadeDisponivel} disponível(is). Ajuste a quantidade para continuar.`
+      }
+    }
+
+    setErrosEstoque(novosErros)
+    return Object.keys(novosErros).length === 0
   }
 
   function handleAlterarBuscaProduto(id: string, termo: string) {
@@ -508,12 +555,24 @@ export function AtendimentoModal({
       return
     }
 
+    const produtosSelecionados = produtos.filter((produto) => produto.ID_produto)
+
+    try {
+      const estoqueSuficiente = await validarEstoque(produtosSelecionados)
+      if (!estoqueSuficiente) {
+        setErro('')
+        return
+      }
+    } catch (error) {
+      console.error('Erro ao validar estoque:', error)
+      setErro('Não foi possível validar o estoque. Tente novamente.')
+      return
+    }
+
     setSalvando(true)
     setErro('')
 
     try {
-      const produtosSelecionados = produtos.filter((produto) => produto.ID_produto)
-
       if (atendimentoId) {
         await atualizarAtendimento(atendimentoId, {
           data_atendimento: converterDatetimeLocalParaApi(data),
@@ -795,8 +854,12 @@ export function AtendimentoModal({
                     produtos.map((produto) => (
                       <div
                         key={produto.id}
-                        className="grid grid-cols-12 gap-2 items-end p-3 bg-slate-100 rounded-lg hover:bg-slate-200 transition-colors group"
+                        className={`rounded-lg p-3 transition-colors group ${errosEstoque[produto.id]
+                          ? 'border-2 border-red-300 bg-red-50'
+                          : 'bg-slate-100 hover:bg-slate-200'
+                          }`}
                       >
+                        <div className="grid grid-cols-12 gap-2 items-end">
                         <div className="col-span-12 md:col-span-4 relative">
                           <label className="block text-xs font-medium text-slate-600 mb-1">
                             Produto
@@ -913,6 +976,12 @@ export function AtendimentoModal({
                             <Icon name="delete" className="text-sm" />
                           </button>
                         </div>
+                        </div>
+                        {errosEstoque[produto.id] && (
+                          <p className="mt-3 rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700" role="alert">
+                            {errosEstoque[produto.id]}
+                          </p>
+                        )}
                       </div>
                     ))
                   )}
@@ -951,7 +1020,7 @@ export function AtendimentoModal({
             </div>
           )}
 
-          {(!atendimentoId || temAlteracoes) && !carregando && (
+          {(!atendimentoId || temAlteracoes || Object.keys(errosEstoque).length > 0) && !carregando && (
             <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
               <button
                 type="button"

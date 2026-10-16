@@ -4,7 +4,8 @@
  * Durante o desenvolvimento, o backend está rodando localmente na porta 3000.
  * Todas as requisições do frontend vão partir desse endereço.
  */
-const API_BASE_URL = "https://autonomo-backend.onrender.com";
+// const API_BASE_URL = "https://autonomo-backend.onrender.com";
+const API_BASE_URL = "http://localhost:3009";
 
 /**
  * Função auxiliar para realizar requisições HTTP para a API.
