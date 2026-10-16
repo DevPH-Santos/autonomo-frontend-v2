@@ -38,6 +38,7 @@ interface AtendimentoModalProps {
 
 type DialogType = 'confirmDelete' | 'unsavedChanges' | null
 type ProdutoBuscaComUnidade = ProdutoBuscaAtendimento & { unidade?: string }
+const LIMITE_ESTOQUE_BAIXO = 5
 
 const STATUS_OPTIONS: StatusAtendimento[] = [
   'Agendado',
@@ -141,6 +142,7 @@ export function AtendimentoModal({
   const [excluindo, setExcluindo] = useState(false)
   const [erro, setErro] = useState('')
   const [errosEstoque, setErrosEstoque] = useState<Record<string, string>>({})
+  const [avisosEstoqueBaixo, setAvisosEstoqueBaixo] = useState<Record<string, string>>({})
   const [dialog, setDialog] = useState<DialogType>(null)
   const [snapshotOriginal, setSnapshotOriginal] = useState('')
 
@@ -180,6 +182,7 @@ export function AtendimentoModal({
   function limparEstadosAuxiliares() {
     setErro('')
     setErrosEstoque({})
+    setAvisosEstoqueBaixo({})
     setDialog(null)
     setClienteAberto(false)
     setClientesOpcoes([])
@@ -392,11 +395,13 @@ export function AtendimentoModal({
     }
   }
 
-  function selecionarProduto(opcao: ProdutoBuscaComUnidade) {
-    if (produtoEmEdicao) {
+  async function selecionarProduto(opcao: ProdutoBuscaComUnidade) {
+    const idLinhaProduto = produtoEmEdicao
+
+    if (idLinhaProduto) {
       setProdutos((produtosAtuais) =>
         produtosAtuais.map((produto) =>
-          produto.id === produtoEmEdicao
+          produto.id === idLinhaProduto
             ? {
               ...produto,
               ID_produto: String(opcao.id),
@@ -412,6 +417,39 @@ export function AtendimentoModal({
     setBuscarProduto('')
     setProdutoAberto(false)
     setProdutoEmEdicao(null)
+
+    if (!idLinhaProduto) return
+
+    setAvisosEstoqueBaixo((avisosAtuais) => {
+      if (!avisosAtuais[idLinhaProduto]) return avisosAtuais
+      const proximosAvisos = { ...avisosAtuais }
+      delete proximosAvisos[idLinhaProduto]
+      return proximosAvisos
+    })
+
+    try {
+      const resposta = await listarProdutos()
+      const produtoAtual = resposta.produtos.find(
+        (produto) => String(produto.ID_produto) === String(opcao.id)
+      )
+      const quantidadeDisponivel = Number(produtoAtual?.quantidade_produto) || 0
+      const unidade = produtoAtual?.unidade_medida || opcao.unidade || 'unidade(s)'
+
+      setAvisosEstoqueBaixo((avisosAtuais) => {
+        const proximosAvisos = { ...avisosAtuais }
+
+        if (produtoAtual && quantidadeDisponivel <= LIMITE_ESTOQUE_BAIXO) {
+          proximosAvisos[idLinhaProduto] =
+            `Estoque baixo: este produto está perto de acabar. Restam apenas ${quantidadeDisponivel} ${unidade} disponíveis.`
+        } else {
+          delete proximosAvisos[idLinhaProduto]
+        }
+
+        return proximosAvisos
+      })
+    } catch (error) {
+      console.error('Erro ao consultar estoque do produto:', error)
+    }
   }
 
   function adicionarProduto() {
@@ -438,6 +476,12 @@ export function AtendimentoModal({
       const proximosErros = { ...errosAtuais }
       delete proximosErros[id]
       return proximosErros
+    })
+    setAvisosEstoqueBaixo((avisosAtuais) => {
+      if (!avisosAtuais[id]) return avisosAtuais
+      const proximosAvisos = { ...avisosAtuais }
+      delete proximosAvisos[id]
+      return proximosAvisos
     })
     if (produtoEmEdicao === id) {
       setProdutoEmEdicao(null)
@@ -499,6 +543,12 @@ export function AtendimentoModal({
 
   function handleAlterarBuscaProduto(id: string, termo: string) {
     setProdutoEmEdicao(id)
+    setAvisosEstoqueBaixo((avisosAtuais) => {
+      if (!avisosAtuais[id]) return avisosAtuais
+      const proximosAvisos = { ...avisosAtuais }
+      delete proximosAvisos[id]
+      return proximosAvisos
+    })
     setProdutos((produtosAtuais) =>
       produtosAtuais.map((produto) =>
         produto.id === id
@@ -856,7 +906,9 @@ export function AtendimentoModal({
                         key={produto.id}
                         className={`rounded-lg p-3 transition-colors group ${errosEstoque[produto.id]
                           ? 'border-2 border-red-300 bg-red-50'
-                          : 'bg-slate-100 hover:bg-slate-200'
+                          : avisosEstoqueBaixo[produto.id]
+                            ? 'border-2 border-amber-300 bg-amber-50'
+                            : 'bg-slate-100 hover:bg-slate-200'
                           }`}
                       >
                         <div className="grid grid-cols-12 gap-2 items-end">
@@ -980,6 +1032,11 @@ export function AtendimentoModal({
                         {errosEstoque[produto.id] && (
                           <p className="mt-3 rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700" role="alert">
                             {errosEstoque[produto.id]}
+                          </p>
+                        )}
+                        {avisosEstoqueBaixo[produto.id] && (
+                          <p className="mt-3 rounded-md border border-amber-200 bg-white px-3 py-2 text-sm font-medium text-amber-800" role="status">
+                            {avisosEstoqueBaixo[produto.id]}
                           </p>
                         )}
                       </div>

@@ -9,6 +9,8 @@ import { formatarMoeda } from '@/services/configuracoesService'
 import { ExportarModal } from '@/components/ui/ExportarModal'
 import { exportacao } from '@/services/exportacaoService'
 
+const LIMITE_ESTOQUE_BAIXO = 5
+
 export function ProdutosPage() {
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [modalAberto, setModalAberto] = useState(false)
@@ -53,14 +55,9 @@ export function ProdutosPage() {
   }
 
   const totalProdutos = produtos.length
-
-  const custoTotal = formatarMoeda(
-    produtos.reduce((acc, p) => {
-      const valor = Number(p.valor_produto || 0)
-      const quantidade = Number(p.quantidade_produto || 0)
-      return acc + (valor * quantidade)
-    }, 0)
-  )
+  const produtosComEstoqueBaixo = produtos
+    .filter((produto) => Number(produto.quantidade_produto) <= LIMITE_ESTOQUE_BAIXO)
+    .sort((a, b) => Number(a.quantidade_produto) - Number(b.quantidade_produto))
 
   const status = totalProdutos > 0 ? 'Ativo' : 'Vazio'
 
@@ -204,17 +201,30 @@ export function ProdutosPage() {
             </div>
           </div>
 
-          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4">
-            <div className="w-12 h-12 bg-sky-50 text-sky-600 rounded-xl flex items-center justify-center">
-              <Icon name="payments" />
+          <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex items-start gap-4">
+            <div className={`w-12 h-12 shrink-0 rounded-xl flex items-center justify-center ${produtosComEstoqueBaixo.length > 0
+              ? 'bg-amber-50 text-amber-600'
+              : 'bg-emerald-50 text-emerald-600'
+              }`}>
+              <Icon name={produtosComEstoqueBaixo.length > 0 ? 'warning' : 'check_circle'} />
             </div>
-            <div>
+            <div className="min-w-0">
               <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
-                Preço Total
+                Produtos acabando
               </p>
-              <h3 className="text-2xl font-bold text-slate-900 mt-1">
-                {custoTotal}
-              </h3>
+              {produtosComEstoqueBaixo.length > 0 ? (
+                <ul className="mt-2 space-y-1">
+                  {produtosComEstoqueBaixo.map((produto) => (
+                    <li key={produto.ID_produto} className="truncate text-sm font-bold text-amber-700">
+                      {produto.nome_produto}: {produto.quantidade_produto} {produto.unidade_medida}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-1 text-lg font-bold text-emerald-700">
+                  Estoque em dia
+                </p>
+              )}
             </div>
           </div>
 
