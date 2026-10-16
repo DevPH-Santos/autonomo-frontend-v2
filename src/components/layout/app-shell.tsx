@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ReactNode, useState, useEffect } from 'react';
+import { ReactNode, useState, useEffect, useCallback } from 'react';
 import { Icon, type IconName } from '../ui/icon';
 import { logout, obterUsuarioLogado, type Usuario } from '@/services/authService';
+import { atualizarStatusLembrete, listarLembretes, type Lembrete } from '@/services/lembreteService';
 
 import { NotificationsModal } from '@/components/ui/NotificationsModal';
 import { NotificationItem } from '@/components/ui/NotificationItem';
@@ -32,51 +33,50 @@ interface AppShellProps {
   onSearch?: (termo: string) => void;
 }
 
-const exemploNotificacoes = [
-  {
-    id: '1',
-    icon: 'notifications' as const,
-    iconBgColor: 'bg-blue-100',
-    iconColor: 'text-blue-600',
-    title: (
-      <span>
-        <strong>João</strong> comentou: "O ajuste ficou ótimo!"
-      </span>
-    ),
-    description: '',
-    timestamp: '2 min',
-    isUnread: true,
-    href: '/clientes/123',
-  },
-  {
-    id: '2',
-    icon: 'check_circle' as const,
-    iconBgColor: 'bg-slate-100',
-    iconColor: 'text-slate-600',
-    title: (
-      <span>
-        <strong>Tarefa concluída:</strong> Limpeza finalizada
-      </span>
-    ),
-    description: '',
-    timestamp: '15 min',
-    isUnread: false,
-  },
-  {
-    id: '3',
-    icon: 'payments' as const,
-    iconBgColor: 'bg-green-100',
-    iconColor: 'text-green-600',
-    title: (
-      <span>
-        <strong>Novo Pagamento:</strong> R$ 350,00 recebido
-      </span>
-    ),
-    description: '',
-    timestamp: '45 min',
-    isUnread: true,
-  },
-];
+function normalizarTexto(valor?: string) {
+  return (valor ?? '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .trim()
+    .toLowerCase();
+}
+
+function formatarDataLembrete(data: string) {
+  const agendada = new Date(data);
+  if (Number.isNaN(agendada.getTime())) return 'Data não informada';
+
+  const agora = new Date();
+  const inicioHoje = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+  const inicioAmanha = new Date(inicioHoje);
+  inicioAmanha.setDate(inicioAmanha.getDate() + 1);
+  const horario = agendada.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  if (agendada >= inicioHoje && agendada < inicioAmanha) return `Hoje às ${horario}`;
+  if (agendada >= inicioAmanha && agendada < new Date(inicioAmanha.getTime() + 86_400_000)) {
+    return `Amanhã às ${horario}`;
+  }
+
+  return agendada.toLocaleDateString('pt-BR', {
+    day: '2-digit',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function obterVisualLembrete(lembrete: Lembrete): Pick<React.ComponentProps<typeof NotificationItem>, 'icon' | 'iconBgColor' | 'iconColor'> {
+  const tipo = normalizarTexto(lembrete.tipo);
+  const categoria = normalizarTexto(lembrete.categoria);
+  const automatico = normalizarTexto(lembrete.origem) === 'automatico';
+
+  if (automatico && (tipo === 'atendimento' || categoria === 'atendimentos')) {
+    return { icon: 'calendar_today', iconBgColor: 'bg-blue-100', iconColor: 'text-blue-600' };
+  }
+  if (automatico && (tipo === 'pagamento' || categoria === 'pagamentos')) {
+    return { icon: 'payments', iconBgColor: 'bg-emerald-100', iconColor: 'text-emerald-600' };
+  }
+  return { icon: 'notifications', iconBgColor: 'bg-slate-100', iconColor: 'text-slate-600' };
+}
 
 export function AppShell({
   children,
@@ -95,13 +95,17 @@ export function AppShell({
   // NOTIFICAÇÕES
   // ========================================
   const [notificacoesAberto, setNotificacoesAberto] = useState(false);
-  const [notificacoes, setNotificacoes] = useState(exemploNotificacoes);
+  const [notificacoes, setNotificacoes] = useState<Lembrete[]>([]);
+  const [carregandoNotificacoes, setCarregandoNotificacoes] = useState(false);
+  const [marcandoNotificacoes, setMarcandoNotificacoes] = useState(false);
+  const [erroNotificacoes, setErroNotificacoes] = useState('');
 
   const [calendarioAberto, setCalendarioAberto] = useState(false);
 
-  const unreadCount = notificacoes.filter(
-    (notificacao) => notificacao.isUnread
-  ).length;
+  const notificacoesVisiveis = notificacoes
+    .filter((lembrete) => lembrete.status === 'Pendente' || lembrete.status === 'Atrasado')
+    .sort((a, b) => new Date(a.data).getTime() - new Date(b.data).getTime());
+  const unreadCount = notificacoesVisiveis.length;
 
   const isSettingsActive =
     pathname === '/configuracoes' ||
@@ -150,38 +154,45 @@ export function AppShell({
     router.push('/login');
   };
 
-  // ========================================
-  // MARCAR TODAS AS NOTIFICAÇÕES COMO LIDAS
-  // ========================================
-  const handleMarkAllAsRead = () => {
-    setNotificacoes((prev) =>
-      prev.map((notificacao) => ({
-        ...notificacao,
-        isUnread: false,
-      }))
-    );
+  const carregarNotificacoes = useCallback(async () => {
+    setCarregandoNotificacoes(true);
+    setErroNotificacoes('');
+    try {
+      const resposta = await listarLembretes();
+      setNotificacoes(resposta.lembretes);
+    } catch {
+      setErroNotificacoes('Não foi possível carregar as notificações.');
+    } finally {
+      setCarregandoNotificacoes(false);
+    }
+  }, []);
+
+  const handleToggleNotificacoes = () => {
+    if (!notificacoesAberto) void carregarNotificacoes();
+    setNotificacoesAberto((aberto) => !aberto);
   };
 
-  // ========================================
-  // MARCAR UMA NOTIFICAÇÃO COMO LIDA
-  // ========================================
-  const handleNotificationClick = (
-    notificacaoId: string,
-    href?: string
-  ) => {
-    setNotificacoes((prev) =>
-      prev.map((notificacao) =>
-        notificacao.id === notificacaoId
-          ? { ...notificacao, isUnread: false }
-          : notificacao
-      )
-    );
+  const handleMarkAllAsRead = async () => {
+    if (notificacoesVisiveis.length === 0) return;
 
-    if (href) {
-      router.push(href);
-      setNotificacoesAberto(false);
+    setMarcandoNotificacoes(true);
+    setErroNotificacoes('');
+    try {
+      await Promise.all(
+        notificacoesVisiveis.map((lembrete) => atualizarStatusLembrete(lembrete.id, 'Concluído'))
+      );
+      setNotificacoes((anteriores) =>
+        anteriores.map((lembrete) =>
+          notificacoesVisiveis.some((visivel) => visivel.id === lembrete.id)
+            ? { ...lembrete, status: 'Concluído' }
+            : lembrete
+        )
+      );
+    } catch {
+      setErroNotificacoes('Não foi possível marcar as notificações como lidas.');
+    } finally {
+      setMarcandoNotificacoes(false);
     }
-
   };
 
   // ========================================
@@ -329,9 +340,7 @@ export function AppShell({
               {/* ========== NOTIFICAÇÕES ========== */}
               <div className="relative">
                 <button
-                  onClick={() =>
-                    setNotificacoesAberto(!notificacoesAberto)
-                  }
+                  onClick={handleToggleNotificacoes}
                   className="relative cursor-pointer text-slate-600 hover:text-blue-600 transition-colors p-2 hover:bg-slate-100 rounded-lg"
                   aria-label="Notificações"
                   aria-expanded={notificacoesAberto}
@@ -351,30 +360,34 @@ export function AppShell({
                   }
                   unreadCount={unreadCount}
                   onMarkAsRead={handleMarkAllAsRead}
+                  isMarkingAsRead={marcandoNotificacoes}
                   onViewAll={() => {
                     router.push('/lembretes');
                     setNotificacoesAberto(false);
                   }}
                 >
-                  {notificacoes.length > 0 ? (
-                    notificacoes.map((notif) => (
+                  {carregandoNotificacoes ? (
+                    <div className="px-4 py-8 text-center">
+                      <p className="text-sm text-slate-500">Carregando notificações...</p>
+                    </div>
+                  ) : erroNotificacoes ? (
+                    <div className="px-4 py-8 text-center">
+                      <p className="text-sm text-slate-500">{erroNotificacoes}</p>
+                    </div>
+                  ) : notificacoesVisiveis.length > 0 ? (
+                    notificacoesVisiveis.map((lembrete) => {
+                      const visual = obterVisualLembrete(lembrete);
+                      return (
                       <NotificationItem
-                        key={notif.id}
-                        icon={notif.icon}
-                        iconBgColor={notif.iconBgColor}
-                        iconColor={notif.iconColor}
-                        title={notif.title}
-                        description={notif.description}
-                        timestamp={notif.timestamp}
-                        isUnread={notif.isUnread}
-                        onClick={() =>
-                          handleNotificationClick(
-                            notif.id,
-                            notif.href
-                          )
-                        }
+                        key={lembrete.id}
+                        {...visual}
+                        title={lembrete.titulo || 'Lembrete sem título'}
+                        description={lembrete.descricao}
+                        timestamp={formatarDataLembrete(lembrete.data)}
+                        isUnread
                       />
-                    ))
+                      );
+                    })
                   ) : (
                     <div className="px-4 py-8 text-center">
                       <Icon

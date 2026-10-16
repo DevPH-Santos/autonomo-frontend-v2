@@ -108,6 +108,8 @@ function normalizarLembrete(value: unknown): Lembrete {
       "data_hora",
       "dataHora",
     ]),
+    categoria: firstString(record, ["categoria", "categoria_lembrete"]),
+    origem: firstString(record, ["origem", "origem_lembrete"]),
   };
 }
 

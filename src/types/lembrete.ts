@@ -10,6 +10,8 @@ export interface Lembrete {
   status: StatusLembrete;
   prioridade: PrioridadeLembrete;
   data: string;
+  categoria?: string;
+  origem?: string;
 }
 
 export interface LembretePayload {
