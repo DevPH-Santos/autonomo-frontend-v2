@@ -6,12 +6,20 @@ import { ProdutoModal } from '@/components/ui/ProdutoModal'
 import { listarProdutos } from '@/services/produtoService'
 import type { Produto } from '@/types/produto'
 import { formatarMoeda } from '@/services/configuracoesService'
+import { ExportarModal } from '@/components/ui/ExportarModal'
+import { exportacao } from '@/services/exportacaoService'
 
 export function ProdutosPage() {
   const [produtos, setProdutos] = useState<Produto[]>([])
   const [modalAberto, setModalAberto] = useState(false)
   const [produtoSelecionado, setProdutoSelecionado] = useState<Produto | null>(null)
   const [carregando, setCarregando] = useState(true)
+  const [erro, setErro] = useState<string | null>(null)
+
+  // ===== EXPORTAÇÃO =====
+
+  const [modalExportarAberto, setModalExportarAberto] =
+    useState(false)
 
   async function carregarProdutos() {
     try {
@@ -56,6 +64,86 @@ export function ProdutosPage() {
 
   const status = totalProdutos > 0 ? 'Ativo' : 'Vazio'
 
+  // ============================================
+  // EXPORTAÇÃO
+  // ============================================
+
+  const prepararDadosExportacao = () => {
+    return produtos.map((item) => ({
+      Produto: item.nome_produto,
+      Quantidade: item.quantidade_produto,
+      'Valor Unitário': Number(item.valor_produto || 0),
+      'Unidade de Medida': item.unidade_medida,
+      'Valor Total': Number(item.quantidade_produto || 0) *
+        Number(item.valor_produto || 0),
+    }))
+  }
+
+  const handleExportar = async (tipo: string) => {
+    try {
+      setErro(null)
+
+      const dados = prepararDadosExportacao()
+
+      if (dados.length === 0) {
+        setErro('Não há produtos para exportar.')
+        return
+      }
+
+      const opcoes = {
+        nomeArquivo: 'produtos',
+        nomePlanilha: 'Produtos',
+      }
+
+      switch (tipo.toLowerCase()) {
+        case 'xlsx':
+          exportacao.exportarXLSX(dados, opcoes)
+          break
+
+        case 'xls':
+          exportacao.exportarXLS(dados, opcoes)
+          break
+
+        case 'csv':
+          exportacao.exportarCSV(dados, opcoes)
+          break
+
+        case 'pdf':
+          await exportacao.exportarPDF(dados, opcoes)
+          break
+
+        case 'png': {
+          const tabela = document.querySelector(
+            'table',
+          ) as HTMLTableElement | null
+
+          if (!tabela) {
+            throw new Error('Tabela de produtos não encontrada.')
+          }
+
+          await exportacao.exportarPNG(tabela, opcoes)
+          break
+        }
+
+        default:
+          throw new Error(
+            `Formato de exportação não suportado: ${tipo}`,
+          )
+      }
+
+      setModalExportarAberto(false)
+    } catch (error) {
+      console.error('Erro na exportação:', error)
+
+      setErro(
+        error instanceof Error
+          ? error.message
+          : 'Erro ao exportar produtos.',
+      )
+    }
+  }
+
+
   return (
     <>
       <ProdutoModal
@@ -64,6 +152,21 @@ export function ProdutosPage() {
         produto={produtoSelecionado}
         onAtualizado={handleFecharModal}
         onExcluido={handleFecharModal}
+      />
+
+      {/* ===== EXPORTAÇÃO ===== */}
+      <ExportarModal
+        isOpen={
+          modalExportarAberto
+        }
+        onClose={() =>
+          setModalExportarAberto(
+            false
+          )
+        }
+        onExportar={
+          handleExportar
+        }
       />
 
       <div className="space-y-8">
@@ -184,6 +287,40 @@ export function ProdutosPage() {
             </div>
           )}
         </section>
+
+        {/* RODAPÉ / EXPORTAÇÃO */}
+
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+          <p className="text-sm text-slate-600">
+            Total de{' '}
+            <span className="font-bold text-slate-900">
+              {
+                produtos.length
+              }
+            </span>{' '}
+            produto
+            {produtos.length !==
+              1
+              ? 's'
+              : ''}
+          </p>
+
+          <div className="flex items-center gap-4">
+            <button
+              type="button"
+              onClick={() =>
+                setModalExportarAberto(
+                  true
+                )
+              }
+              className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+            >
+              <Icon name="download" />
+              Exportar Relatório
+            </button>
+          </div>
+        </div>
+
       </div>
     </>
   )
