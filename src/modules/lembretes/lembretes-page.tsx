@@ -16,6 +16,9 @@ import type {
   TipoLembrete,
 } from '@/services/lembreteService'
 
+import { ExportarModal } from '@/components/ui/ExportarModal'
+import { exportacao } from '@/services/exportacaoService'
+
 // ==========================================
 // CONSTANTES
 // ==========================================
@@ -280,6 +283,11 @@ export function LembretesPage() {
   const [modalAberto, setModalAberto] = useState(false)
   const [lembreteSelecionado, setLembreteSelecionado] = useState<Lembrete | null>(null)
 
+  // ===== EXPORTAÇÃO =====
+
+  const [modalExportarAberto, setModalExportarAberto] =
+    useState(false)
+
   // ===== FILTROS =====
   const [filtroTipo, setFiltroTipo] = useState<TipoLembrete | ''>('')
   const [filtroStatus, setFiltroStatus] = useState<StatusLembrete | ''>('')
@@ -377,6 +385,96 @@ export function LembretesPage() {
     }
   }
 
+
+  // ============================================
+  // EXPORTAÇÃO
+  // ============================================
+
+
+  const prepararDadosExportacao = () => {
+    return lembretesFiltrados.map((item) => ({
+      Título: item.titulo,
+      Descrição: item.descricao,
+      Tipo: item.tipo,
+      Status: item.status,
+      Prioridade: item.prioridade,
+      Data: item.data
+        ? (() => {
+          const data = new Date(item.data)
+
+          return Number.isNaN(data.getTime())
+            ? item.data
+            : data.toLocaleString('pt-BR')
+        })()
+        : '',
+    }))
+  }
+
+  const handleExportar = async (tipo: string) => {
+    try {
+      setErro(null)
+
+      const dados = prepararDadosExportacao()
+
+      if (dados.length === 0) {
+        setErro('Não há lembretes para exportar.')
+        return
+      }
+
+      const opcoes = {
+        nomeArquivo: 'lembretes',
+        nomePlanilha: 'Lembretes',
+      }
+
+      switch (tipo.toLowerCase()) {
+        case 'xlsx':
+          exportacao.exportarXLSX(dados, opcoes)
+          break
+
+        case 'xls':
+          exportacao.exportarXLS(dados, opcoes)
+          break
+
+        case 'csv':
+          exportacao.exportarCSV(dados, opcoes)
+          break
+
+        case 'pdf':
+          await exportacao.exportarPDF(dados, opcoes)
+          break
+
+        case 'png': {
+          const tabela = document.querySelector(
+            'table',
+          ) as HTMLTableElement | null
+
+          if (!tabela) {
+            throw new Error('Tabela de lembretes não encontrada.')
+          }
+
+          await exportacao.exportarPNG(tabela, opcoes)
+          break
+        }
+
+        default:
+          throw new Error(
+            `Formato de exportação não suportado: ${tipo}`,
+          )
+      }
+
+      setModalExportarAberto(false)
+    } catch (error) {
+      console.error('Erro na exportação:', error)
+
+      setErro(
+        error instanceof Error
+          ? error.message
+          : 'Erro ao exportar lembretes.',
+      )
+    }
+  }
+
+
   return (
     <div className="space-y-8">
       {/* ===== MÉTRICAS ===== */}
@@ -406,8 +504,8 @@ export function LembretesPage() {
 
         <div
           className={`p-6 rounded-2xl shadow-sm border transition-colors ${totalAtrasado > 0
-              ? 'bg-red-50/50 border-red-100 hover:bg-red-50/80'
-              : 'bg-white border-slate-200 hover:bg-slate-50/50'
+            ? 'bg-red-50/50 border-red-100 hover:bg-red-50/80'
+            : 'bg-white border-slate-200 hover:bg-slate-50/50'
             }`}
         >
           <div className="flex items-center justify-between mb-4">
@@ -543,8 +641,8 @@ export function LembretesPage() {
                   key={num}
                   onClick={() => setPaginaAtual(num)}
                   className={`w-8 h-8 rounded-lg text-xs font-bold transition-colors ${paginaAtual === num
-                      ? 'bg-blue-600 text-white'
-                      : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
+                    ? 'bg-blue-600 text-white'
+                    : 'border border-slate-200 text-slate-700 hover:bg-slate-100'
                     }`}
                 >
                   {num}
@@ -561,6 +659,40 @@ export function LembretesPage() {
             </div>
           </div>
         )}
+
+      </div>
+
+      {/* RODAPÉ / EXPORTAÇÃO */}
+
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <p className="text-sm text-slate-600">
+          Total de{' '}
+          <span className="font-bold text-slate-900">
+            {
+              lembretesFiltrados.length
+            }
+          </span>{' '}
+          produto
+          {lembretesFiltrados.length !==
+            1
+            ? 's'
+            : ''}
+        </p>
+
+        <div className="flex items-center gap-4">
+          <button
+            type="button"
+            onClick={() =>
+              setModalExportarAberto(
+                true
+              )
+            }
+            className="flex items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-600 transition-colors"
+          >
+            <Icon name="download" />
+            Exportar Relatório
+          </button>
+        </div>
       </div>
 
       {/* ===== MODAL ===== */}
@@ -574,6 +706,22 @@ export function LembretesPage() {
           carregarLembretes()
         }}
       />
+
+      {/* ===== EXPORTAÇÃO ===== */}
+      <ExportarModal
+        isOpen={
+          modalExportarAberto
+        }
+        onClose={() =>
+          setModalExportarAberto(
+            false
+          )
+        }
+        onExportar={
+          handleExportar
+        }
+      />
+
     </div>
   )
 }
