@@ -16,16 +16,18 @@ import { SkeletonCard, Skeleton } from "@/components/ui/skeleton";
 import { formatarMoeda } from '@/services/configuracoesService';
 
 export function DashboardPage(): ReactNode {
-  const [periodSelected, setPeriodSelected] = useState<"dia" | "mes" | "ano">("mes");
+  const [periodSelected, setPeriodSelected] = useState<"dia" | "mes" | "ano">("dia");
   const [monthSelected, setMonthSelected] = useState(new Date().getMonth());
   const [yearSelected, setYearSelected] = useState(new Date().getFullYear());
   const [resumo, setResumo] = useState<DashboardResumo | null>(null);
   const [carregando, setCarregando] = useState(true);
+  const [erro, setErro] = useState<string | null>(null);
 
   useEffect(() => {
     async function carregar() {
       try {
         setCarregando(true);
+        setErro(null);
         const dados = await obterDashboardResumo(
           periodSelected,
           periodSelected === "dia" ? monthSelected : undefined,
@@ -34,6 +36,8 @@ export function DashboardPage(): ReactNode {
         setResumo(dados);
       } catch (err) {
         console.error("Erro ao carregar dashboard:", err);
+        setResumo(null);
+        setErro("Não foi possível carregar os dados do dashboard. Tente novamente em instantes.");
       } finally {
         setCarregando(false);
       }
@@ -95,6 +99,12 @@ export function DashboardPage(): ReactNode {
         }
       />
 
+      {erro && (
+        <div role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {erro}
+        </div>
+      )}
+
       {/* ====== CARDS DE RESUMO FINANCEIRO (KPIs) ====== */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
         {carregando
@@ -132,7 +142,7 @@ export function DashboardPage(): ReactNode {
             {carregando ? (
               <Skeleton className="w-full h-[300px]" />
             ) : (
-              <Grafico data={getGraficoData()} height={300} />
+              <Grafico data={getGraficoData() ?? []} height={300} />
             )}
           </div>
         </div>
