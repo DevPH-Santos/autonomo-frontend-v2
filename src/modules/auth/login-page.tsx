@@ -141,13 +141,13 @@ export function LoginPage() {
             </LoadingButton>
           </form>
 
-          <div className="mt-8 text-center text-sm text-(--color_neutral)">
-            <span>Ainda n&atilde;o possui uma conta?</span>
+          <div className="mt-8 border-t border-(--color_neutral_light)/40 pt-6 text-center text-sm">
+            <p className="mb-3">Ainda não possui uma conta?</p>
             <Link
               href="/cadastro"
-              className="ml-1 font-semibold text-(--color_primary_variant) transition hover:text-(--color_primary_dark)"
+              className="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 bg-white px-5 py-2.5 font-semibold !text-blue-600 no-underline w-full"
             >
-              Solicitar acesso
+              Cadastrar uma conta
             </Link>
           </div>
         </section>

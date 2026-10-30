@@ -62,7 +62,7 @@ export function ConfiguracoesPage() {
   const [perfil, setPerfil] = useState<DadosPerfil>({
     nome: 'Pedro Santos',
     email: 'pedro@email.com',
-    telefone: '(11) 98765-4321',
+    telefone: '',
   });
   const [perfilOriginal, setPerfilOriginal] = useState(perfil);
 
@@ -393,17 +393,17 @@ function AbaNegocio({
           <CampoRotulado titulo="Nome do negócio" className="md:col-span-2">
             <input
               required
-              defaultValue="Pedro Piscinas & Manutenção"
+              defaultValue=""
               className={CLASSE_CAMPO}
             />
           </CampoRotulado>
 
           <CampoRotulado titulo="CPF ou CNPJ" opcional>
-            <input defaultValue="38.921.405/0001-82" className={CLASSE_CAMPO} />
+            <input defaultValue="" className={CLASSE_CAMPO} />
           </CampoRotulado>
 
           <CampoRotulado titulo="Chave Pix para recebimentos">
-            <input defaultValue="pedro@email.com" className={CLASSE_CAMPO} />
+            <input defaultValue="" className={CLASSE_CAMPO} />
           </CampoRotulado>
 
           <CampoRotulado titulo="Cidade">

@@ -418,13 +418,6 @@ export function PagamentosPage() {
             ))}
           </select>
         </div>
-        <button
-          onClick={() => { setPagamentoSelecionado(null); setModalAberto(true) }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg text-xs font-bold shadow-md transition-colors flex items-center gap-2 whitespace-nowrap"
-        >
-          <Icon name="add" className="text-sm" />
-          Novo Lançamento
-        </button>
       </section>
 
       {/* ===== TABELA ===== */}

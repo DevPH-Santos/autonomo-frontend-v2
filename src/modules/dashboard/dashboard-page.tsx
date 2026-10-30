@@ -63,13 +63,11 @@ export function DashboardPage(): ReactNode {
       icon: "payments" as const,
       label: "RECEITA MENSAL",
       value: resumo ? resumo.receitaMensal : formatarMoeda(0),
-      trend: { icon: "trending_up" as const, percentage: 5 },
     },
     {
       icon: "account_balance_wallet" as const,
       label: "LUCRO MENSAL",
       value: resumo ? resumo.lucroMensal : formatarMoeda(0),
-      trend: { icon: "trending_flat" as const, percentage: 0 },
     },
     {
       icon: "pending_actions" as const,

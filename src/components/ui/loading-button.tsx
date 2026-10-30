@@ -18,7 +18,7 @@ export function LoadingButton({
     <button
       {...props}
       disabled={disabled || isLoading}
-      className={`inline-flex w-full items-center justify-center rounded-lg bg-[linear-gradient(135deg,#006399_0%,#005786_100%)] px-5 py-4 font-semibold text-white shadow-lg shadow-[#006399]/20 transition duration-300 hover:shadow-[#006399]/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-80 ${className}`}
+      className={`inline-flex w-full items-center justify-center rounded-lg bg-blue-600 px-5 py-4 font-semibold text-white shadow-lg shadow-[#006399]/20 transition duration-300 hover:shadow-[#006399]/30 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-80 ${className}`}
     >
       {isLoading ? (
         <>
