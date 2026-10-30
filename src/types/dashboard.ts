@@ -18,6 +18,7 @@ export interface ClientRank {
 }
 
 export interface RouteItem {
+    atendimentoId: string | number;
     hour: string;
     period: "AM" | "PM";
     objective: string;

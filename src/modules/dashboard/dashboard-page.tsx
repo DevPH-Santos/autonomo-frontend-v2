@@ -14,6 +14,7 @@ import { obterDashboardResumo } from "@/services/dashboardService";
 import type { DashboardResumo } from "@/types/dashboard";
 import { SkeletonCard, Skeleton } from "@/components/ui/skeleton";
 import { formatarMoeda } from '@/services/configuracoesService';
+import { AtendimentoModal } from '@/components/ui/AtendimentoModal';
 
 export function DashboardPage(): ReactNode {
   const [periodSelected, setPeriodSelected] = useState<"dia" | "mes" | "ano">("dia");
@@ -22,6 +23,7 @@ export function DashboardPage(): ReactNode {
   const [resumo, setResumo] = useState<DashboardResumo | null>(null);
   const [carregando, setCarregando] = useState(true);
   const [erro, setErro] = useState<string | null>(null);
+  const [atendimentoSelecionadoId, setAtendimentoSelecionadoId] = useState<string | number | null>(null);
 
   useEffect(() => {
     async function carregar() {
@@ -83,6 +85,12 @@ export function DashboardPage(): ReactNode {
 
   return (
     <>
+      <AtendimentoModal
+        isOpen={Boolean(atendimentoSelecionadoId)}
+        atendimentoId={atendimentoSelecionadoId}
+        onClose={() => setAtendimentoSelecionadoId(null)}
+      />
+
       {/* ====== CABEÇALHO E ALERTA ====== */}
       <SectionHeader
         title="Visão Geral"
@@ -169,7 +177,10 @@ export function DashboardPage(): ReactNode {
           </div>
         </div>
       ) : (
-        <RoutesSection routes={resumo?.rotasDoDia ?? []} />
+        <RoutesSection
+          routes={resumo?.rotasDoDia ?? []}
+          onRouteClick={setAtendimentoSelecionadoId}
+        />
       )}
     </>
   );

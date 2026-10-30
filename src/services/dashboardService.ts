@@ -1,6 +1,42 @@
 import { apiFetch } from "./api";
 import { formatarMoeda } from "./configuracoesService";
+import { listarAtendimentos, type Atendimento } from "./atendimentoService";
 import type { DashboardResumo } from "@/types/dashboard";
+
+function dataEhHoje(valor: string) {
+    const hoje = new Date();
+    const texto = String(valor ?? "");
+    const correspondencia = texto.match(/^(\d{4})-(\d{2})-(\d{2})/);
+
+    if (correspondencia) {
+        return Number(correspondencia[1]) === hoje.getFullYear()
+            && Number(correspondencia[2]) === hoje.getMonth() + 1
+            && Number(correspondencia[3]) === hoje.getDate();
+    }
+
+    const data = new Date(texto);
+    return !Number.isNaN(data.getTime())
+        && data.getFullYear() === hoje.getFullYear()
+        && data.getMonth() === hoje.getMonth()
+        && data.getDate() === hoje.getDate();
+}
+
+function extrairHora(valor: string) {
+    return String(valor).match(/\d{1,2}:\d{2}/)?.[0] ?? "--:--";
+}
+
+function encontrarRotaDoDashboard(atendimento: Atendimento, rotas: Array<Record<string, unknown>>) {
+    const idAtendimento = String(atendimento.ID_atendimento);
+    const horario = extrairHora(atendimento.data_atendimento);
+
+    return rotas.find((rota) =>
+        String(rota.ID_atendimento ?? rota.id_atendimento ?? rota.atendimentoId ?? rota.id ?? "") === idAtendimento
+    ) ?? rotas.find((rota) => {
+        const cliente = String(rota.nomeCliente ?? rota.nome_cliente ?? rota.cliente ?? "").trim().toLowerCase();
+        return cliente === String(atendimento.nome_cliente ?? "").trim().toLowerCase()
+            && extrairHora(String(rota.horario ?? rota.hora ?? rota.dataHora ?? "")) === horario;
+    });
+}
 
 export async function obterDashboardResumo(
     period: "dia" | "mes" | "ano" = "mes",
@@ -39,7 +75,10 @@ export async function obterDashboardResumo(
     };
 
     const query = params.size > 0 ? `?${params.toString()}` : "";
-    const response = await apiFetch<DashboardApiResponse>(`/dashboard${query}`);
+    const [response, respostaAtendimentos] = await Promise.all([
+        apiFetch<DashboardApiResponse>(`/dashboard${query}`),
+        listarAtendimentos(),
+    ]);
     const indicadores = response.indicadores ?? {};
     const normalizarSerie = (serie: Array<Record<string, unknown>> = []) => serie.map((item) => ({
         name: String(item.nome ?? item.name ?? item.label ?? item.mes ?? item.periodo ?? ""),
@@ -63,15 +102,19 @@ export async function obterDashboardResumo(
             service: String(item.tipoServico ?? item.servico ?? item.tipo ?? "Serviço"),
             revenue: formatarMoeda(Number(item.faturamento ?? item.receita ?? item.valor ?? 0)),
         })),
-        rotasDoDia: (response.rotasHoje ?? []).map((item) => {
-            const horario = String(item.horario ?? item.hora ?? item.dataHora ?? "");
-            const hora = horario.match(/\d{1,2}:\d{2}/)?.[0] ?? "--:--";
+        rotasDoDia: respostaAtendimentos.atendimentos
+            .filter((atendimento) => dataEhHoje(atendimento.data_atendimento))
+            .map((atendimento) => {
+            const rota = encontrarRotaDoDashboard(atendimento, response.rotasHoje ?? []);
+            const horario = atendimento.data_atendimento;
+            const hora = extrairHora(horario);
             const horaNumerica = Number(hora.split(":")[0]);
             return {
+                atendimentoId: atendimento.ID_atendimento,
                 hour: hora,
                 period: horaNumerica >= 12 ? "PM" as const : "AM" as const,
-                objective: String(item.descricao ?? item.servico ?? item.titulo ?? "Atendimento"),
-                address: String(item.endereco ?? item.enderecoCliente ?? item.local ?? "Endereço não cadastrado"),
+                objective: String(rota?.descricao ?? rota?.servico ?? rota?.titulo ?? atendimento.descri_atendimento ?? "Atendimento"),
+                address: String(rota?.endereco ?? rota?.enderecoCliente ?? rota?.local ?? "Endereço não cadastrado"),
             };
         }),
         dadosDia: normalizarSerie(response.graficos?.receitaPorDia),

@@ -106,6 +106,7 @@ export function ClientRankItem({
 // ============================================================================
 
 interface RouteCardProps {
+    onClick: () => void;
     hour: string;
     period: "AM" | "PM";
     objective: string;
@@ -113,13 +114,18 @@ interface RouteCardProps {
 }
 
 export function RouteCard({
+    onClick,
     hour,
     period,
     objective,
     address,
 }: RouteCardProps): ReactNode {
     return (
-        <div className="flex items-start gap-4 p-5 bg-white border-l-4 border-blue-600 rounded-lg hover:shadow-md transition-shadow">
+        <button
+            type="button"
+            onClick={onClick}
+            className="flex w-full items-start gap-4 rounded-lg border-l-4 border-blue-600 bg-white p-5 text-left transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        >
             {/* Hora */}
             <div className="flex flex-col items-center min-w-fit">
                 <span className="text-xs text-gray-400 font-bold uppercase tracking-wider">
@@ -133,7 +139,7 @@ export function RouteCard({
                 <p className="font-semibold text-sm text-gray-900 mb-1">{objective}</p>
                 <p className="text-xs text-gray-600">{address}</p>
             </div>
-        </div>
+        </button>
     );
 }
 
@@ -361,34 +367,33 @@ export function ClientsRankSection({
 
 interface RoutesSectionProps {
     routes: Array<{
+        atendimentoId: string | number;
         hour: string;
         period: "AM" | "PM";
         objective: string;
         address: string;
     }>;
+    onRouteClick: (atendimentoId: string | number) => void;
 }
 
 export function RoutesSection({
     routes,
+    onRouteClick,
 }: RoutesSectionProps): ReactNode {
     return (
         <div className="p-8 rounded-xl bg-gray-100">
             <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
                 <h4 className="text-xl font-bold text-gray-950">Rotas de Hoje</h4>
 
-                <Link
-                    href="/rotas/mapa"
-                    className="flex items-center gap-1 text-blue-600 font-bold text-sm hover:text-blue-700"
-                >
-                    Ver no mapa
-                    <Icon name="map" className="text-base" />
-                </Link>
-
             </header>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {routes.map((route, index) => (
-                    <RouteCard key={index} {...route} />
+                {routes.map((route) => (
+                    <RouteCard
+                        key={route.atendimentoId}
+                        {...route}
+                        onClick={() => onRouteClick(route.atendimentoId)}
+                    />
                 ))}
             </div>
         </div>
