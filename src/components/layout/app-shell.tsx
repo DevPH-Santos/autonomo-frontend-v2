@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { ReactNode, useState, useEffect, useCallback } from 'react';
+import { ReactNode, useState, useEffect, useCallback, useRef } from 'react';
 import { Icon, type IconName } from '../ui/icon';
 import { logout, obterUsuarioLogado, type Usuario } from '@/services/authService';
 import { atualizarStatusLembrete, listarLembretes, type Lembrete } from '@/services/lembreteService';
@@ -11,6 +11,14 @@ import { NotificationsModal } from '@/components/ui/NotificationsModal';
 import { NotificationItem } from '@/components/ui/NotificationItem';
 
 import CalendarioModal from '@/components/ui/CalendarioModal';
+import { buscarGlobal, type ResultadosBuscaGlobal } from '@/services/buscaGlobalService';
+import { type Cliente } from '@/services/clienteService';
+import { type Atendimento } from '@/services/atendimentoService';
+import { type Pagamento } from '@/services/pagamentoService';
+import { ResultadosBuscaGlobal as ResultadosBusca } from '@/components/ui/ResultadosBuscaGlobal';
+import { VisualizarClienteModal } from '@/components/ui/VisualizarClienteModal';
+import { AtendimentoModal } from '@/components/ui/AtendimentoModal';
+import { EditarPagamentoModal, type PagamentoParaEdicao } from '@/components/ui/EditarPagamentoModal';
 
 const navigation = [
   { href: '/dashboard', label: 'Dashboard', icon: 'dashboard' },
@@ -78,6 +86,26 @@ function obterVisualLembrete(lembrete: Lembrete): Pick<React.ComponentProps<type
   return { icon: 'notifications', iconBgColor: 'bg-slate-100', iconColor: 'text-slate-600' };
 }
 
+function mapearPagamentoParaEdicao(pagamento: Pagamento): PagamentoParaEdicao {
+  const data = new Date(pagamento.data);
+  const dataValida = !Number.isNaN(data.getTime());
+
+  return {
+    id: String(pagamento.id),
+    cliente: pagamento.cliente ?? 'Cliente não informado',
+    mesRef: dataValida
+      ? data.toLocaleDateString('pt-BR', { month: 'long', year: 'numeric', timeZone: 'UTC' })
+      : 'Janeiro',
+    valor: pagamento.valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+    vencimento: dataValida
+      ? data.toLocaleDateString('pt-BR', { timeZone: 'UTC' })
+      : '',
+    forma: pagamento.forma,
+    observacao: pagamento.observacao,
+    status: pagamento.status.toLowerCase() as PagamentoParaEdicao['status'],
+  };
+}
+
 export function AppShell({
   children,
   onSearch,
@@ -88,6 +116,20 @@ export function AppShell({
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [busca, setBusca] = useState('');
   const [buscaModalAberto, setBuscaModalAberto] = useState(false);
+  const [buscaAberta, setBuscaAberta] = useState(false);
+  const [resultadosBusca, setResultadosBusca] = useState<ResultadosBuscaGlobal>({
+    clientes: [],
+    atendimentos: [],
+    pagamentos: [],
+  });
+  const [buscando, setBuscando] = useState(false);
+  const [erroBusca, setErroBusca] = useState<string | null>(null);
+  const [clienteSelecionadoBusca, setClienteSelecionadoBusca] = useState<Cliente | null>(null);
+  const [atendimentoSelecionadoBusca, setAtendimentoSelecionadoBusca] = useState<string | number | null>(null);
+  const [pagamentoSelecionadoBusca, setPagamentoSelecionadoBusca] = useState<PagamentoParaEdicao | null>(null);
+  const temporizadorBusca = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const requisicaoBuscaAtual = useRef(0);
+  const areaBuscaDesktop = useRef<HTMLDivElement>(null);
   const [mostrarPerfil, setMostrarPerfil] = useState(false);
   const [usuario, setUsuario] = useState<Usuario | null>(null);
 
@@ -133,17 +175,92 @@ export function AppShell({
     setMostrarPerfil(false);
   }, [pathname]);
 
+  useEffect(() => () => {
+    if (temporizadorBusca.current) clearTimeout(temporizadorBusca.current);
+  }, []);
+
+  useEffect(() => {
+    if (!buscaAberta || buscaModalAberto) return;
+
+    const fecharAoClicarFora = (event: MouseEvent) => {
+      if (!areaBuscaDesktop.current?.contains(event.target as Node)) {
+        setBuscaAberta(false);
+        setBusca('');
+        setResultadosBusca({ clientes: [], atendimentos: [], pagamentos: [] });
+      }
+    };
+
+    document.addEventListener('mousedown', fecharAoClicarFora);
+
+    return () => document.removeEventListener('mousedown', fecharAoClicarFora);
+  }, [buscaAberta, buscaModalAberto]);
+
   // ========================================
   // BUSCA
   // ========================================
+  const buscar = (valor: string) => {
+    if (temporizadorBusca.current) clearTimeout(temporizadorBusca.current);
+
+    const termo = valor.trim();
+    const idRequisicao = ++requisicaoBuscaAtual.current;
+
+    if (termo.length < 2) {
+      setResultadosBusca({ clientes: [], atendimentos: [], pagamentos: [] });
+      setBuscando(false);
+      setErroBusca(null);
+      return;
+    }
+
+    setBuscando(true);
+    setErroBusca(null);
+    temporizadorBusca.current = setTimeout(() => {
+      void buscarGlobal(termo)
+        .then((resultados) => {
+          if (idRequisicao === requisicaoBuscaAtual.current) setResultadosBusca(resultados);
+        })
+        .catch(() => {
+          if (idRequisicao === requisicaoBuscaAtual.current) {
+            setResultadosBusca({ clientes: [], atendimentos: [], pagamentos: [] });
+            setErroBusca('Não foi possível realizar a busca.');
+          }
+        })
+        .finally(() => {
+          if (idRequisicao === requisicaoBuscaAtual.current) setBuscando(false);
+        });
+    }, 250);
+  };
+
   const handleBusca = (valor: string) => {
     setBusca(valor);
+    setBuscaAberta(true);
+    buscar(valor);
     onSearch?.(valor);
   };
 
   const handleBuscaModal = (valor: string) => {
-    setBusca(valor);
-    onSearch?.(valor);
+    handleBusca(valor);
+  };
+
+  const fecharBusca = () => {
+    setBuscaAberta(false);
+    setBuscaModalAberto(false);
+    setBusca('');
+    setResultadosBusca({ clientes: [], atendimentos: [], pagamentos: [] });
+  };
+
+  const selecionarClienteBusca = (cliente: Cliente) => {
+    setClienteSelecionadoBusca(cliente);
+    fecharBusca();
+  };
+
+  const selecionarAtendimentoBusca = (atendimento: Atendimento) => {
+    setAtendimentoSelecionadoBusca(atendimento.ID_atendimento);
+    fecharBusca();
+  };
+
+  const selecionarPagamentoBusca = (pagamento: Pagamento) => {
+    setPagamentoSelecionadoBusca(mapearPagamentoParaEdicao(pagamento));
+    fecharBusca();
   };
 
   // ========================================
@@ -292,7 +409,7 @@ export function AppShell({
 
             {/* Busca Desktop / Tablet */}
             <div className="hidden sm:flex flex-1 max-w-md">
-              <div className="relative w-full">
+              <div ref={areaBuscaDesktop} className="relative w-full">
                 <Icon
                   name="search"
                   className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-lg"
@@ -300,11 +417,29 @@ export function AppShell({
 
                 <input
                   type="text"
-                  placeholder="Buscar..."
+                  placeholder="Buscar clientes, atendimentos ou pagamentos..."
                   value={busca}
                   onChange={(e) => handleBusca(e.target.value)}
+                  onFocus={() => setBuscaAberta(true)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') fecharBusca();
+                  }}
                   className="w-full pl-10 pr-4 py-2 bg-slate-100 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition"
                 />
+
+                {buscaAberta && (
+                  <div className="absolute left-0 right-0 top-[calc(100%+0.5rem)] z-50 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl">
+                    <ResultadosBusca
+                      termo={busca}
+                      resultados={resultadosBusca}
+                      carregando={buscando}
+                      erro={erroBusca}
+                      onSelecionarCliente={selecionarClienteBusca}
+                      onSelecionarAtendimento={selecionarAtendimentoBusca}
+                      onSelecionarPagamento={selecionarPagamentoBusca}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
@@ -482,11 +617,17 @@ export function AppShell({
       {/* ========== MODAL BUSCA MOBILE ========== */}
       {
         buscaModalAberto && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-start pt-16 sm:hidden">
-            <div className="w-full mx-4 bg-white rounded-lg shadow-xl">
+          <div
+            className="fixed inset-0 z-50 flex items-start bg-black/50 pt-16 sm:hidden"
+            onClick={fecharBusca}
+          >
+            <div
+              className="mx-4 w-full rounded-lg bg-white shadow-xl"
+              onClick={(event) => event.stopPropagation()}
+            >
               <div className="flex items-center gap-2 p-4 border-b border-slate-200">
                 <button
-                  onClick={() => setBuscaModalAberto(false)}
+                  onClick={fecharBusca}
                   className="p-1 hover:bg-slate-100 rounded-lg"
                   aria-label="Fechar"
                 >
@@ -505,7 +646,7 @@ export function AppShell({
                   <input
                     autoFocus
                     type="text"
-                    placeholder="Buscar..."
+                    placeholder="Buscar clientes, atendimentos ou pagamentos..."
                     value={busca}
                     onChange={(e) =>
                       handleBuscaModal(e.target.value)
@@ -516,42 +657,41 @@ export function AppShell({
               </div>
 
               {busca && (
-                <div className="p-4 max-h-96 overflow-y-auto">
-                  <p className="text-xs text-slate-500 mb-3">
-                    Resultados para "{busca}"
-                  </p>
-
-                  <div className="flex flex-col gap-1">
-                    {navigation
-                      .filter((item) =>
-                        item.label
-                          .toLowerCase()
-                          .includes(busca.toLowerCase())
-                      )
-                      .map((item) => (
-                        <Link
-                          key={item.href}
-                          href={item.href}
-                          onClick={() =>
-                            setBuscaModalAberto(false)
-                          }
-                          className="flex items-center gap-3 p-3 rounded-lg hover:bg-slate-100 text-sm font-medium text-slate-800"
-                        >
-                          <Icon
-                            name={item.icon}
-                            className="text-blue-600"
-                          />
-
-                          <span>{item.label}</span>
-                        </Link>
-                      ))}
-                  </div>
+                <div className="border-t border-slate-200">
+                  <ResultadosBusca
+                    termo={busca}
+                    resultados={resultadosBusca}
+                    carregando={buscando}
+                    erro={erroBusca}
+                    onSelecionarCliente={selecionarClienteBusca}
+                    onSelecionarAtendimento={selecionarAtendimentoBusca}
+                    onSelecionarPagamento={selecionarPagamentoBusca}
+                  />
                 </div>
               )}
             </div>
           </div>
         )
       }
+
+      <VisualizarClienteModal
+        isOpen={Boolean(clienteSelecionadoBusca)}
+        cliente={clienteSelecionadoBusca}
+        onClose={() => setClienteSelecionadoBusca(null)}
+      />
+
+      <AtendimentoModal
+        isOpen={Boolean(atendimentoSelecionadoBusca)}
+        atendimentoId={atendimentoSelecionadoBusca}
+        onClose={() => setAtendimentoSelecionadoBusca(null)}
+      />
+
+      <EditarPagamentoModal
+        key={pagamentoSelecionadoBusca?.id ?? 'busca-pagamento'}
+        isOpen={Boolean(pagamentoSelecionadoBusca)}
+        pagamento={pagamentoSelecionadoBusca}
+        onClose={() => setPagamentoSelecionadoBusca(null)}
+      />
     </div>
   );
 }

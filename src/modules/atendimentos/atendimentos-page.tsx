@@ -788,8 +788,8 @@ export function AtendimentosPage() {
         )}
 
         <section className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 bg-slate-100 p-4 rounded-lg">
-          <div className="flex items-center gap-4">
-            <div className="flex gap-1 bg-slate-200 p-1 rounded-lg">
+          <div className="flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:gap-4">
+            <div className="flex w-full gap-1 overflow-x-auto rounded-lg bg-slate-200 p-1 sm:w-auto">
               <button
                 type="button"
                 onClick={() => setActiveView('mes')}
@@ -822,11 +822,11 @@ export function AtendimentosPage() {
               </button>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-start">
               <button
                 type="button"
                 onClick={() => navegarPeriodo(-1)}
-                className="p-1.5 rounded-lg hover:bg-slate-300 transition-colors"
+                className="shrink-0 p-1.5 rounded-lg hover:bg-slate-300 transition-colors"
                 aria-label={
                   activeView === 'dia'
                     ? 'Dia anterior'
@@ -838,14 +838,14 @@ export function AtendimentosPage() {
                 <Icon name="chevron_left" />
               </button>
 
-              <span className="font-semibold text-slate-900 whitespace-nowrap text-sm capitalize">
+              <span className="min-w-0 flex-1 truncate text-center text-sm font-semibold capitalize text-slate-900 sm:flex-none">
                 {periodoAtual}
               </span>
 
               <button
                 type="button"
                 onClick={() => navegarPeriodo(1)}
-                className="p-1.5 rounded-lg hover:bg-slate-300 transition-colors"
+                className="shrink-0 p-1.5 rounded-lg hover:bg-slate-300 transition-colors"
                 aria-label={
                   activeView === 'dia'
                     ? 'Próximo dia'
