@@ -179,8 +179,7 @@ export function ConfiguracoesPage() {
           aoMudarPreferencia={(chave, valor) =>
             setPreferenciasLembretes({ ...preferenciasLembretes, [chave]: valor })
           }
-          aoSalvar={(event) =>
-            {mostrarMensagemAoSalvar(event, 'Preferências de lembretes salvas com sucesso.'); salvarConfiguracoes({ ...obterConfiguracoes(), moeda, lembretes: preferenciasLembretes });}
+          aoSalvar={(event) => { mostrarMensagemAoSalvar(event, 'Preferências de lembretes salvas com sucesso.'); salvarConfiguracoes({ ...obterConfiguracoes(), moeda, lembretes: preferenciasLembretes }); }
           }
         />
       )}
@@ -257,11 +256,10 @@ function NavegacaoAbas({
               key={aba.id}
               type="button"
               onClick={() => aoSelecionarAba(aba.id)}
-              className={`inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition sm:px-1 ${
-                estaAtiva
+              className={`inline-flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition sm:px-1 ${estaAtiva
                   ? 'border-blue-600 text-blue-600'
                   : 'border-transparent text-slate-500 hover:border-slate-300 hover:text-slate-700'
-              }`}
+                }`}
             >
               <Icon name={aba.icone} className="h-5 w-5" />
               {aba.titulo}
@@ -412,11 +410,39 @@ function AbaNegocio({
 
           <CampoRotulado titulo="Estado">
             <select defaultValue="SP" className={CLASSE_CAMPO}>
-              <option value="SP">São Paulo (SP)</option>
-              <option value="RJ">Rio de Janeiro (RJ)</option>
-              <option value="MG">Minas Gerais (MG)</option>
-              <option value="PR">Paraná (PR)</option>
-              <option value="SC">Santa Catarina (SC)</option>
+              {[
+                { sigla: "AC", nome: "Acre" },
+                { sigla: "AL", nome: "Alagoas" },
+                { sigla: "AP", nome: "Amapá" },
+                { sigla: "AM", nome: "Amazonas" },
+                { sigla: "BA", nome: "Bahia" },
+                { sigla: "CE", nome: "Ceará" },
+                { sigla: "DF", nome: "Distrito Federal" },
+                { sigla: "ES", nome: "Espírito Santo" },
+                { sigla: "GO", nome: "Goiás" },
+                { sigla: "MA", nome: "Maranhão" },
+                { sigla: "MT", nome: "Mato Grosso" },
+                { sigla: "MS", nome: "Mato Grosso do Sul" },
+                { sigla: "MG", nome: "Minas Gerais" },
+                { sigla: "PA", nome: "Pará" },
+                { sigla: "PB", nome: "Paraíba" },
+                { sigla: "PR", nome: "Paraná" },
+                { sigla: "PE", nome: "Pernambuco" },
+                { sigla: "PI", nome: "Piauí" },
+                { sigla: "RJ", nome: "Rio de Janeiro" },
+                { sigla: "RN", nome: "Rio Grande do Norte" },
+                { sigla: "RS", nome: "Rio Grande do Sul" },
+                { sigla: "RO", nome: "Rondônia" },
+                { sigla: "RR", nome: "Roraima" },
+                { sigla: "SC", nome: "Santa Catarina" },
+                { sigla: "SP", nome: "São Paulo" },
+                { sigla: "SE", nome: "Sergipe" },
+                { sigla: "TO", nome: "Tocantins" },
+              ].map((estado) => (
+                <option key={estado.sigla} value={estado.sigla}>
+                  {estado.nome} ({estado.sigla})
+                </option>
+              ))}
             </select>
           </CampoRotulado>
         </div>
@@ -512,9 +538,8 @@ function AbaLembretes({
         </div>
 
         <div
-          className={`space-y-3 transition-opacity ${
-            notificacoesAtivas ? 'opacity-100' : 'pointer-events-none opacity-40'
-          }`}
+          className={`space-y-3 transition-opacity ${notificacoesAtivas ? 'opacity-100' : 'pointer-events-none opacity-40'
+            }`}
         >
           <OpcaoLembrete
             titulo="Pagamentos próximos do vencimento"
@@ -711,14 +736,12 @@ function Interruptor({
       aria-checked={ativo}
       aria-label={rotulo}
       onClick={() => aoMudar(!ativo)}
-      className={`relative h-6 w-11 rounded-full transition ${
-        ativo ? 'bg-blue-600' : 'bg-slate-300'
-      }`}
+      className={`relative h-6 w-11 rounded-full transition ${ativo ? 'bg-blue-600' : 'bg-slate-300'
+        }`}
     >
       <span
-        className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${
-          ativo ? 'left-6' : 'left-1'
-        }`}
+        className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition ${ativo ? 'left-6' : 'left-1'
+          }`}
       />
     </button>
   );
@@ -809,9 +832,8 @@ function LinhaAcao({
     <div className="flex flex-col justify-between gap-4 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center">
       <div className="flex gap-3">
         <div
-          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${
-            vermelho ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
-          }`}
+          className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${vermelho ? 'bg-red-50 text-red-600' : 'bg-blue-50 text-blue-600'
+            }`}
         >
           <Icon name={icone} className="h-5 w-5" />
         </div>
