@@ -595,7 +595,7 @@ function AbaConta({
         <LinhaAcao
           icone="visibility"
           titulo="Senha de acesso"
-          descricao="Última alteração há 3 meses"
+          descricao="Use pelo menos 8 caracteres, incluindo letras, números e símbolos."
           acao="Alterar senha"
           aoClicar={aoAbrirModalSenha}
         />
