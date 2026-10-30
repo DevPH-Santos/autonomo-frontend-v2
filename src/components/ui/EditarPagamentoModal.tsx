@@ -5,7 +5,7 @@ import { formatarInteiroComoMoeda } from '@/services/formatters'
 import { atualizarPagamento } from '@/services/pagamentoService'
 import { useEffect, useState } from 'react'
 
-interface Pagamento {
+export interface PagamentoParaEdicao {
     id: string
     cliente: string
     mesRef: string
@@ -19,7 +19,7 @@ interface Pagamento {
 interface EditarPagamentoModalProps {
     isOpen: boolean
     onClose: () => void
-    pagamento: Pagamento | null
+  pagamento: PagamentoParaEdicao | null
 }
 
 const meses = [
@@ -43,7 +43,7 @@ function alterarMesDoVencimento(vencimento: string, mes: string) {
     return `${ano}-${String(indiceMes + 1).padStart(2, '0')}-${String(Math.min(dia, ultimoDiaDoMes)).padStart(2, '0')}`
 }
 
-function criarCamposIniciais(pagamento: Pagamento | null) {
+function criarCamposIniciais(pagamento: PagamentoParaEdicao | null) {
     if (!pagamento) {
         return {
             cliente: '',
