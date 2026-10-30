@@ -379,7 +379,7 @@ function FilterSelect({
 
 export function AtendimentosPage() {
   const [activeView, setActiveView] =
-    useState<VisualizacaoPeriodo>('dia')
+    useState<VisualizacaoPeriodo>('mes')
 
   const [dataReferencia, setDataReferencia] = useState(() => inicioDoDia(new Date()))
 
@@ -792,13 +792,13 @@ export function AtendimentosPage() {
             <div className="flex gap-1 bg-slate-200 p-1 rounded-lg">
               <button
                 type="button"
-                onClick={() => setActiveView('dia')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeView === 'dia'
+                onClick={() => setActiveView('mes')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeView === 'mes'
                   ? 'bg-white text-blue-600 shadow-sm'
                   : 'bg-transparent text-slate-600 hover:text-slate-900'
                   }`}
               >
-                Dia
+                Mês
               </button>
               <button
                 type="button"
@@ -812,13 +812,13 @@ export function AtendimentosPage() {
               </button>
               <button
                 type="button"
-                onClick={() => setActiveView('mes')}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeView === 'mes'
+                onClick={() => setActiveView('dia')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeView === 'dia'
                   ? 'bg-white text-blue-600 shadow-sm'
                   : 'bg-transparent text-slate-600 hover:text-slate-900'
                   }`}
               >
-                Mês
+                Dia
               </button>
             </div>
 
