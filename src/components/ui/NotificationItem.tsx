@@ -27,7 +27,7 @@ export function NotificationItem({
   return (
     <div
       onClick={onClick}
-      className={`px-5 py-4 flex gap-4 transition-colors duration-200 relative group ${onClick ? 'cursor-pointer hover:bg-slate-100' : ''} ${
+      className={`relative flex gap-3 px-3 py-3 transition-colors duration-200 group sm:gap-4 sm:px-5 sm:py-4 ${onClick ? 'cursor-pointer hover:bg-slate-100' : ''} ${
         isUnread ? '' : 'opacity-75 hover:opacity-100'
       }`}
     >
@@ -45,11 +45,11 @@ export function NotificationItem({
 
       {/* Content */}
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-slate-900 font-medium pr-6 leading-tight mb-1">
+        <p className="mb-1 break-words pr-2 text-sm font-medium leading-tight text-slate-900 sm:pr-6">
           {title}
         </p>
-        <p className="text-xs text-slate-500">{description}</p>
-        <p className="text-xs text-slate-400 mt-1">{timestamp}</p>
+        <p className="break-words text-xs text-slate-500">{description}</p>
+        <p className="mt-1 break-words text-xs text-slate-400">{timestamp}</p>
       </div>
 
       {/* Unread dot */}
