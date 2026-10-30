@@ -393,17 +393,17 @@ function AbaNegocio({
           <CampoRotulado titulo="Nome do negócio" className="md:col-span-2">
             <input
               required
-              defaultValue=""
+              defaultValue=" "
               className={CLASSE_CAMPO}
             />
           </CampoRotulado>
 
           <CampoRotulado titulo="CPF ou CNPJ" opcional>
-            <input defaultValue="" className={CLASSE_CAMPO} />
+            <input defaultValue=" " className={CLASSE_CAMPO} />
           </CampoRotulado>
 
           <CampoRotulado titulo="Chave Pix para recebimentos">
-            <input defaultValue="" className={CLASSE_CAMPO} />
+            <input defaultValue=" " className={CLASSE_CAMPO} />
           </CampoRotulado>
 
           <CampoRotulado titulo="Cidade">
