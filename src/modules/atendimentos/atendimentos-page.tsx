@@ -34,6 +34,8 @@ interface FilterOption {
   label: string
 }
 
+type VisualizacaoPeriodo = 'dia' | 'semana' | 'mes'
+
 const STATUS_OPTIONS: StatusAtendimento[] = [
   'Agendado',
   'Em Andamento',
@@ -84,6 +86,10 @@ function inicioDaSemana(data: Date) {
   return inicio
 }
 
+function inicioDoMes(data: Date) {
+  return new Date(data.getFullYear(), data.getMonth(), 1)
+}
+
 function adicionarDias(data: Date, quantidade: number) {
   const resultado = inicioDoDia(data)
 
@@ -95,29 +101,39 @@ function adicionarDias(data: Date, quantidade: number) {
 function pertenceAoPeriodo(
   valor: string,
   dataReferencia: Date,
-  visualizacao: 'dia' | 'semana'
+  visualizacao: VisualizacaoPeriodo
 ) {
   const dataAtendimento = parseDataAtendimento(valor)
 
   if (!dataAtendimento) return false
 
   const data = inicioDoDia(dataAtendimento)
-  const inicio =
-    visualizacao === 'dia'
-      ? inicioDoDia(dataReferencia)
-      : inicioDaSemana(dataReferencia)
-  const fim = adicionarDias(inicio, visualizacao === 'dia' ? 1 : 7)
+  const inicio = visualizacao === 'dia'
+    ? inicioDoDia(dataReferencia)
+    : visualizacao === 'semana'
+      ? inicioDaSemana(dataReferencia)
+      : inicioDoMes(dataReferencia)
+  const fim = visualizacao === 'mes'
+    ? new Date(inicio.getFullYear(), inicio.getMonth() + 1, 1)
+    : adicionarDias(inicio, visualizacao === 'dia' ? 1 : 7)
 
   return data >= inicio && data < fim
 }
 
 function formatarPeriodo(
   dataReferencia: Date,
-  visualizacao: 'dia' | 'semana'
+  visualizacao: VisualizacaoPeriodo
 ) {
   if (visualizacao === 'dia') {
     return dataReferencia.toLocaleDateString('pt-BR', {
       day: '2-digit',
+      month: 'long',
+      year: 'numeric',
+    })
+  }
+
+  if (visualizacao === 'mes') {
+    return dataReferencia.toLocaleDateString('pt-BR', {
       month: 'long',
       year: 'numeric',
     })
@@ -363,7 +379,7 @@ function FilterSelect({
 
 export function AtendimentosPage() {
   const [activeView, setActiveView] =
-    useState<'dia' | 'semana'>('dia')
+    useState<VisualizacaoPeriodo>('dia')
 
   const [dataReferencia, setDataReferencia] = useState(() => inicioDoDia(new Date()))
 
@@ -480,11 +496,15 @@ export function AtendimentosPage() {
   )
 
   function navegarPeriodo(direcao: -1 | 1) {
-    const quantidadeDias = activeView === 'dia' ? 1 : 7
+    if (activeView === 'mes') {
+      setDataReferencia((data) =>
+        new Date(data.getFullYear(), data.getMonth() + direcao, 1)
+      )
+      return
+    }
 
-    setDataReferencia((data) =>
-      adicionarDias(data, direcao * quantidadeDias)
-    )
+    const quantidadeDias = activeView === 'dia' ? 1 : 7
+    setDataReferencia((data) => adicionarDias(data, direcao * quantidadeDias))
   }
 
   useEffect(() => {
@@ -733,7 +753,7 @@ export function AtendimentosPage() {
             </h1>
 
             <p className="text-sm sm:text-base text-slate-600 mt-1">
-              Gerencie seus atendimentos da semana para ter uma agenda mais organizada.
+              Gerencie seus atendimentos para ter uma agenda mais organizada.
             </p>
           </div>
 
@@ -790,6 +810,16 @@ export function AtendimentosPage() {
               >
                 Semana
               </button>
+              <button
+                type="button"
+                onClick={() => setActiveView('mes')}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${activeView === 'mes'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'bg-transparent text-slate-600 hover:text-slate-900'
+                  }`}
+              >
+                Mês
+              </button>
             </div>
 
             <div className="flex items-center gap-2">
@@ -800,7 +830,9 @@ export function AtendimentosPage() {
                 aria-label={
                   activeView === 'dia'
                     ? 'Dia anterior'
-                    : 'Semana anterior'
+                    : activeView === 'semana'
+                      ? 'Semana anterior'
+                      : 'Mês anterior'
                 }
               >
                 <Icon name="chevron_left" />
@@ -817,7 +849,9 @@ export function AtendimentosPage() {
                 aria-label={
                   activeView === 'dia'
                     ? 'Próximo dia'
-                    : 'Próxima semana'
+                    : activeView === 'semana'
+                      ? 'Próxima semana'
+                      : 'Próximo mês'
                 }
               >
                 <Icon name="chevron_right" />
